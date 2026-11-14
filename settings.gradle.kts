@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Buzzsense"
 include(":app")
+include(":shared")

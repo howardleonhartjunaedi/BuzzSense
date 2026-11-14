@@ -13,3 +13,16 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Build output in every module (incl. :shared)
+build/
+.kotlin/
+
+# JVM crash / replay logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Per-user / IDE-generated Android Studio files
+/.idea/deviceManager.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/artifacts/
