@@ -10,8 +10,9 @@ import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.utils.time.KoogClock
 import com.buzzsense.veritas.shared.context.WeatherSource
-import com.buzzsense.veritas.shared.detector.LogMelWindow
-import com.buzzsense.veritas.shared.detector.WingbeatModel
+import com.buzzsense.veritas.shared.detector.Class3
+import com.buzzsense.veritas.shared.detector.FeatureSpec
+import com.buzzsense.veritas.shared.detector.WindowClassifier
 import com.buzzsense.veritas.shared.model.GuidanceChunk
 import com.buzzsense.veritas.shared.model.Language
 import com.buzzsense.veritas.shared.model.Weather
@@ -35,11 +36,19 @@ class ScriptedExecutor(private val answers: ArrayDeque<() -> String>) : PromptEx
     override fun close() = Unit
 }
 
-/** Constant scores per stage, ignoring the features. */
-class FixedWingbeatModel(private val mosquito: Float, private val aedes: Float) : WingbeatModel {
-    override suspend fun mosquitoScores(windows: List<LogMelWindow>) = FloatArray(windows.size) { mosquito }
-    override suspend fun aedesScores(windows: List<LogMelWindow>) = FloatArray(windows.size) { aedes }
+/** Constant vote shares per window: [mosquito] = 1 - share(none), [aedes] = share(aedes) among mosquitoes. */
+class FixedClassifier(private val mosquito: Float, private val aedes: Float) : WindowClassifier {
+    override suspend fun classify(embeddings: List<FloatArray>) = embeddings.map {
+        mapOf(Class3.NONE to 1f - mosquito, Class3.AEDES to mosquito * aedes, Class3.CULEX to mosquito * (1f - aedes))
+    }
 }
+
+/** Small synthetic spec (identity tilt, zero mean, unit sd) for tests that do not need the real store. */
+val TEST_SPEC = FeatureSpec(
+    sr = 8_000, clipSamples = 4_960, nFft = 512, hop = 256, nMels = 40, fmin = 50.0, fmax = 4_000.0,
+    tiltResid = List(40) { r -> List(40) { c -> if (r == c) 1f else 0f } },
+    mu = List(80) { 0f }, sd = List(80) { 1f }, version = "test",
+)
 
 object FixedWeather : WeatherSource {
     override suspend fun today() = Weather("San Juan, PR", 31.0, 80.0, 2.0, "2026-11-14T10:00")
@@ -60,6 +69,12 @@ fun goodDraftJson(ids: List<String> = CHUNKS.map { it.id }) = """
      ],
      "urgency":"HIGH"}
 """.trimIndent()
+
+/** Wingbeat-like signal: fundamental [f0] plus harmonics 2-4 with falling level. */
+fun harmonicSamples(seconds: Int = 1, rate: Int = 8_000, f0: Double = 600.0) =
+    FloatArray(seconds * rate) { i ->
+        (1..4).sumOf { h -> 0.4 / h * kotlin.math.sin(2 * kotlin.math.PI * h * f0 * i / rate) }.toFloat()
+    }
 
 /** 3 s of a 600 Hz tone at 8 kHz: enough windows for the detector. */
 fun toneSamples(seconds: Int = 3, rate: Int = 8_000, hz: Double = 600.0) =

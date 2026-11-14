@@ -3,6 +3,7 @@ package com.buzzsense.veritas.shared
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import com.buzzsense.veritas.shared.agent.BuzzAlertEngine
 import com.buzzsense.veritas.shared.audio.AudioClip
+import com.buzzsense.veritas.shared.detector.AcousticFeatures
 import com.buzzsense.veritas.shared.detector.DominantFrequencyBaseline
 import com.buzzsense.veritas.shared.detector.WingbeatDetector
 import com.buzzsense.veritas.shared.llm.FailoverPolicy
@@ -26,7 +27,7 @@ class BuzzAlertAgentTest {
     private val model = GoogleModels.Gemini2_5Flash
 
     private fun engine(mosquito: Float, aedes: Float, vararg tiers: ProviderTier) = BuzzAlertEngine(
-        detector = WingbeatDetector(FixedWingbeatModel(mosquito, aedes), DominantFrequencyBaseline(550f..700f)),
+        detector = WingbeatDetector(AcousticFeatures(TEST_SPEC), FixedClassifier(mosquito, aedes), DominantFrequencyBaseline(425f..809f)),
         weather = FixedWeather,
         retriever = GuidanceRetriever { CHUNKS },
         chunkLookup = { ids -> CHUNKS.filter { it.id in ids } },

@@ -48,7 +48,7 @@ class BuzzAlertTools(
         argsType = typeToken<NoArgs>(),
         resultType = typeToken<DetectionResult>(),
         name = ToolPermissions.TOOL_DETECTOR,
-        description = "Runs the on-device two-stage wingbeat CNN on the current clip and returns labels and scores.",
+        description = "Runs the on-device two-stage wingbeat detector (kNN over the acoustic store) on the current clip and returns labels and scores.",
     ) {
         override suspend fun execute(args: NoArgs): DetectionResult {
             val clip = checkNotNull(clipHolder.clip) { "No clip for this run" }

@@ -1,6 +1,6 @@
 package com.buzzsense.veritas.shared
 
-import com.buzzsense.veritas.shared.detector.LogMelExtractor
+import com.buzzsense.veritas.shared.detector.AcousticFeatures
 import com.buzzsense.veritas.shared.guardrails.CanaryToken
 import com.buzzsense.veritas.shared.guardrails.HealthSafetyValidator
 import com.buzzsense.veritas.shared.guardrails.ToolNotPermittedException
@@ -95,8 +95,11 @@ class GuardrailsAndRetrievalTest {
     }
 
     @Test
-    fun dominantFrequencyFindsTheTone() {
-        val hz = LogMelExtractor().dominantFrequencyHz(toneSamples(hz = 600.0), 8_000)!!
-        assertTrue(abs(hz - 600f) < 20f, "got $hz")
+    fun harmonicSumFindsTheWingbeatFundamental() {
+        val f = AcousticFeatures(TEST_SPEC)
+        // A pure tone is ambiguous for a harmonic sum (150/200/300 Hz tie); use 4 harmonics like a wingbeat.
+        val window = f.windows(harmonicSamples(f0 = 600.0), 8_000).first()
+        val hz = f.f0Hz(window)
+        assertTrue(abs(hz - 600f) < 3f, "got $hz")
     }
 }

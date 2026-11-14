@@ -22,12 +22,14 @@ data class DetectionResult(
     val mosquitoScore: Float,
     /** Mean stage-2 score over windows stage 1 called mosquito; null if none. */
     val aedesScore: Float?,
-    /** Dominant wingbeat frequency (Hz) for the spectrogram marker. */
+    /** Wingbeat fundamental (Hz, harmonic sum, median over windows) for the spectrogram marker. */
     val dominantFrequencyHz: Float?,
     /** Answer of the dominant-frequency rule, shown next to the CNN in "How it decided". */
     val baselineAedes: Verdict,
     val windowCount: Int,
     val mosquitoWindowCount: Int,
+    /** Mean kNN vote share per class3 label over all windows, for "How it decided". */
+    val classVotes: Map<String, Float> = emptyMap(),
 )
 
 @Serializable

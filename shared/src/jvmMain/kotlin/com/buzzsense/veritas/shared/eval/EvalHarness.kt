@@ -2,12 +2,15 @@ package com.buzzsense.veritas.shared.eval
 
 import com.buzzsense.veritas.shared.agent.BuzzAlertEngine
 import com.buzzsense.veritas.shared.context.OpenMeteoWeather
+import com.buzzsense.veritas.shared.detector.AcousticFeatures
+import com.buzzsense.veritas.shared.detector.AcousticStore
 import com.buzzsense.veritas.shared.detector.DominantFrequencyBaseline
+import com.buzzsense.veritas.shared.detector.FeatureSpec
+import com.buzzsense.veritas.shared.detector.KnnClassifier
 import com.buzzsense.veritas.shared.detector.WingbeatDetector
 import com.buzzsense.veritas.shared.llm.NetworkStatus
 import com.buzzsense.veritas.shared.llm.ProviderKeys
 import com.buzzsense.veritas.shared.llm.buildProviderChain
-import com.buzzsense.veritas.shared.onnx.OnnxWingbeatModel
 import com.buzzsense.veritas.shared.rag.GuidanceDb
 import com.buzzsense.veritas.shared.rag.GuidanceStore
 import com.buzzsense.veritas.shared.rag.HybridRetriever
@@ -31,8 +34,15 @@ import java.io.File
  * OPENAI_API_KEY), never from files in the repo.
  */
 object JvmBuzzAlert {
-    fun create(artifacts: File, baselineBandHz: ClosedFloatingPointRange<Float>): Pair<BuzzAlertEngine, GuidanceStore> {
-        val store = GuidanceDb.open(File(artifacts, "guidance.db").absolutePath, System.getenv("SQLITE_VEC_LIB"))
+    /**
+     * @param artifacts folder with `guidance.db`, `jumantik_rag.sqlite` and `feature_spec.json`
+     *   (the pipeline's `data/rag/` plus the guidance DB). `SQLITE_VEC_LIB` must point to vec0.
+     */
+    fun create(artifacts: File, baselineBandHz: ClosedFloatingPointRange<Float> = 425f..809f): Pair<BuzzAlertEngine, GuidanceStore> {
+        val vecLib = checkNotNull(System.getenv("SQLITE_VEC_LIB")) { "set SQLITE_VEC_LIB to the sqlite-vec library (vec0)" }
+        val store = GuidanceDb.open(File(artifacts, "guidance.db").absolutePath, vecLib)
+        val spec = FeatureSpec.fromJson(File(artifacts, "feature_spec.json").readText())
+        val acoustic = AcousticStore.open(File(artifacts, "jumantik_rag.sqlite").absolutePath, vecLib)
         val http = HttpClient(OkHttp) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
         val providers = buildProviderChain(
             keys = ProviderKeys(
@@ -44,10 +54,7 @@ object JvmBuzzAlert {
             network = NetworkStatus { true },
         )
         val engine = BuzzAlertEngine(
-            detector = WingbeatDetector(
-                OnnxWingbeatModel(File(artifacts, "wingbeat_stage1.onnx").readBytes(), File(artifacts, "wingbeat_stage2.onnx").readBytes()),
-                DominantFrequencyBaseline(baselineBandHz),
-            ),
+            detector = WingbeatDetector(AcousticFeatures(spec), KnnClassifier(acoustic), DominantFrequencyBaseline(baselineBandHz)),
             weather = OpenMeteoWeather(http),
             retriever = HybridRetriever(store, PrecomputedQueryEmbedder(store)),
             chunkLookup = store::chunks,

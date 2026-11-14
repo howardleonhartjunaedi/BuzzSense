@@ -5,11 +5,14 @@ import com.buzzsense.veritas.shared.agent.BuzzAlertEngine
 import com.buzzsense.veritas.shared.context.ForecastRiskSource
 import com.buzzsense.veritas.shared.context.NoForecast
 import com.buzzsense.veritas.shared.context.OpenMeteoWeather
+import com.buzzsense.veritas.shared.detector.AcousticFeatures
+import com.buzzsense.veritas.shared.detector.AcousticStore
 import com.buzzsense.veritas.shared.detector.DominantFrequencyBaseline
+import com.buzzsense.veritas.shared.detector.FeatureSpec
+import com.buzzsense.veritas.shared.detector.KnnClassifier
 import com.buzzsense.veritas.shared.detector.WingbeatDetector
 import com.buzzsense.veritas.shared.guardrails.SpeechGate
 import com.buzzsense.veritas.shared.llm.buildProviderChain
-import com.buzzsense.veritas.shared.onnx.OnnxWingbeatModel
 import com.buzzsense.veritas.shared.onnx.SileroVad
 import com.buzzsense.veritas.shared.rag.GuidanceDb
 import com.buzzsense.veritas.shared.rag.HybridRetriever
@@ -25,26 +28,30 @@ import java.io.File
  * Wires the shared engine for the Android app. Expected files in the app's
  * `src/main/assets/`:
  *
- * - `guidance.db`            — corpus built by the JVM script (FTS5 + vectors + query vectors)
- * - `wingbeat_stage1.onnx`   — mosquito vs background
- * - `wingbeat_stage2.onnx`   — Aedes aegypti vs other species
+ * - `feature_spec.json`      — copied from `Audio File/data/rag/` (must match the store)
+ * - `jumantik_rag.sqlite`    — acoustic store from `build_rag.py` (kNN detector)
+ * - `guidance.db`            — prevention-guidance corpus (FTS5 + vectors + query vectors)
  * - `silero_vad.onnx`        — speech rejection
  *
- * Optional: `libvec0.so` (sqlite-vec) in the app's `src/main/jniLibs/<abi>/`, and
- * a `.litertlm` model in `filesDir/llm/` for the on-device tier.
+ * Required: `libvec0.so` (sqlite-vec) in the app's `src/main/jniLibs/<abi>/`; the
+ * acoustic store cannot be searched without it. Optional: a `.litertlm` model in
+ * `filesDir/llm/` for the on-device tier.
  */
 object AndroidBuzzAlert {
 
     fun create(
         context: Context,
-        /** Dominant-frequency band fitted on the training sites (from the frozen eval config). */
-        baselineBandHz: ClosedFloatingPointRange<Float>,
+        /** f0 band fitted on the train split (eval_retrieval.py: 10th-90th percentile of Aedes f0). */
+        baselineBandHz: ClosedFloatingPointRange<Float> = 425f..809f,
         risk: ForecastRiskSource = NoForecast,
     ): BuzzAlertEngine {
         val app = context.applicationContext
 
         val vecLib = File(app.applicationInfo.nativeLibraryDir, "libvec0.so").takeIf { it.exists() }?.absolutePath
+            ?: error("libvec0.so (sqlite-vec) missing from jniLibs: the acoustic store needs it")
         val store = GuidanceDb.open(copyAsset(app, "guidance.db").absolutePath, vecLib)
+        val spec = FeatureSpec.fromJson(app.assets.open("feature_spec.json").use { it.readBytes().decodeToString() })
+        val acoustic = AcousticStore.open(copyAsset(app, "jumantik_rag.sqlite").absolutePath, vecLib)
 
         val http = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
@@ -58,7 +65,8 @@ object AndroidBuzzAlert {
 
         return BuzzAlertEngine(
             detector = WingbeatDetector(
-                model = OnnxWingbeatModel(asset(app, "wingbeat_stage1.onnx"), asset(app, "wingbeat_stage2.onnx")),
+                features = AcousticFeatures(spec),
+                classifier = KnnClassifier(acoustic),
                 baseline = DominantFrequencyBaseline(baselineBandHz),
             ),
             weather = OpenMeteoWeather(http),
