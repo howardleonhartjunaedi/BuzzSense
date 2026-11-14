@@ -1,3 +1,67 @@
 <resources>
     <string name="app_name">Buzzsense</string>
+    <string name="brand_name">BuzzSense</string>
+
+    <!-- Required on every result and write-up surface. Matches DISCLAIMER_EN in :shared. -->
+    <string name="disclaimer">This project is a prototype and is not medical advice.</string>
+
+    <!-- Navigation -->
+    <string name="nav_detect">Detect</string>
+    <string name="nav_learn">Learn</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_about">About</string>
+    <string name="action_history">History</string>
+    <string name="action_back">Back</string>
+    <string name="action_skip">Skip</string>
+
+    <!-- Detect home -->
+    <string name="detect_eyebrow">Detect</string>
+    <string name="detect_title">Is it a dengue mosquito?</string>
+    <string name="detect_subtitle">Record the buzz for five seconds. BuzzSense listens for the wingbeat of Aedes aegypti.</string>
+    <string name="detect_tap_to_record">Tap to record</string>
+    <string name="detect_band_hint">Listening band: 400–700 Hz</string>
+    <string name="detect_tips">Tips for a clear recording</string>
+    <string name="mic_start">Start recording</string>
+    <string name="mic_stop">Stop recording</string>
+    <string name="mic_off_title">Microphone is off</string>
+    <string name="mic_off_body">BuzzSense needs the microphone to hear the buzz. Audio never leaves your phone.</string>
+    <string name="mic_off_action">Allow microphone</string>
+
+    <!-- Recording -->
+    <string name="recording_listening">Listening… keep still</string>
+
+    <!-- Analyzing -->
+    <string name="analyzing_title">Analyzing the buzz</string>
+    <string name="analyzing_body">Checking the wingbeat on your phone.</string>
+
+    <!-- Results -->
+    <string name="result_eyebrow">Result</string>
+    <string name="result_aedes_title">Likely Aedes aegypti</string>
+    <string name="result_aedes_body">The mosquito that spreads dengue.</string>
+    <string name="result_not_dengue_title">Likely not a dengue mosquito</string>
+    <string name="result_not_dengue_body">The buzz sounds like a different mosquito.</string>
+    <string name="result_not_sure_title">Not sure, try again</string>
+    <string name="result_not_sure_body">The sound was faint or noisy. Record again, closer.</string>
+    <string name="result_none_title">No mosquito heard</string>
+    <string name="result_none_body">We did not hear a wingbeat in this recording.</string>
+    <string name="result_confidence">AI confidence</string>
+    <string name="result_what_to_do">What to do now</string>
+    <string name="result_record_again">Record again</string>
+    <string name="result_details">How it decided</string>
+
+    <!-- What to do now sheet -->
+    <string name="todo_title">What to do now</string>
+    <string name="todo_subtitle">Prevention checklist. Review before you share.</string>
+    <string name="todo_done">Done</string>
+    <string name="todo_official_info">Official dengue info</string>
+
+    <!-- Tips sheet -->
+    <string name="tips_title">Tips for a clear recording</string>
+    <string name="tips_body">Hold the phone within 30 cm of the mosquito in a quiet room. Turn off fans: they mask the buzz.</string>
+    <string name="tips_highlight">fans</string>
+    <string name="tips_got_it">Got it</string>
+
+    <!-- Tabs not built yet -->
+    <string name="tab_soon_title">Coming soon</string>
+    <string name="tab_soon_body">This tab is designed in Stitch and will be built next.</string>
 </resources>
