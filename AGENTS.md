@@ -8,6 +8,7 @@ Gradle needs a JDK: `export JAVA_HOME="/c/Program Files/Android/Android Studio/j
 | Test shared module | `./gradlew :shared:jvmTest` | Fast; runs `commonTest` on the JVM, incl. full graph runs with scripted providers |
 | Parity + real-store kNN | `JUMANTIK_RAG_DIR="O:/Veritas AI/Audio File/data/rag" SQLITE_VEC_LIB="O:/Veritas AI/Audio File/.venv/Lib/site-packages/sqlite_vec/vec0" ./gradlew :shared:jvmTest` | Without the env vars the real-store test is skipped |
 | Live Gemini check | `GEMINI_API_KEY=<AI Studio key> ./gradlew :shared:jvmTest` | Runs `GeminiLiveTest` (key check + one full graph run); skipped without the env var. Never write the key to a file |
+| Build guidance.db | `cd tools/guidance && .venv/Scripts/python.exe -I build_guidance_db.py` | Writes `app/src/main/assets/guidance.db`; setup and source format in `tools/guidance/README.md`. Then run `:shared:jvmTest` (`GuidanceDbParityTest`) |
 | Compile Android side | `./gradlew :shared:compileAndroidMain` | Catches LiteRT/Keystore/ONNX Android code |
 | Build app | `./gradlew :app:assembleDebug` | APK in `app/build/outputs/apk/debug/` |
 | Retrieval eval (eval 7) | Run `com.buzzsense.veritas.shared.eval.EvalHarnessKt` (jvmMain) with args `<artifactsDir> <queries.json> <results.jsonl>` | No Gradle run task yet; appends rows to the results table |
@@ -31,6 +32,7 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 - API keys enter the app only through `GeminiKeySetup` (`:app`) → `KeystoreApiKeyStore`; on a laptop only through env vars. No key in code, Gradle files, tests or logs.
 - `app/src/main/AndroidManifest.xml` must keep `INTERNET` and `ACCESS_NETWORK_STATE`; without them every cloud tier fails and `AndroidNetworkStatus` cannot see connectivity.
 - `AudioClip` stays in memory and is wiped in `finally`; never write audio to disk, logs or `DecisionTrace`.
+- Guidance chunk ids are citations: never rename a shipped id. Corpus text carries no medicine, prophylaxis or dosing; `build_guidance_db.py` mirrors `HealthSafetyValidator.MEDICINE`, so change both together. A change to `GuidanceQueryBuilder` needs a rebuilt `guidance.db` (`GuidanceDbParityTest` fails otherwise).
 - `GuidanceStore` uses the bundled SQLite driver: FTS5 is always there, sqlite-vec only when `addExtension` succeeds. Keep the brute-force fallback working.
 - Add a `commonTest` case for every new guardrail, failover rule or graph edge. Detector tests go in `AcousticFeaturesTest`, not in `GuardrailsAndRetrievalTest`.
 - Tests that call a real provider live in `jvmTest`, read the key from an env var and return early without it (see `GeminiLiveTest`).
@@ -40,4 +42,6 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 ## Known gaps (update when fixed)
 - `Thresholds` defaults are placeholders until picked on validation domains.
 - The full acoustic store (~350 MB) is too large for an APK; a train-split slim store is not built yet.
-- `FallbackChecklist` chunk ids are placeholders; `guidance.db` has no builder yet.
+- `guidance.db` holds 17 English malaria passages (Indonesia review); only one (3M Plus) covers dengue. WHO/CDC/PAHO/PR Health dengue pages in English and Spanish are still to add.
+- Retrieval: when the mosquito is not Aedes, `GuidanceQueryBuilder` adds malaria terms (nets, night, fever test); the fever-test passage still misses the top 5 for those queries. Tune it with eval 7, not by editing passage text.
+- `FallbackChecklist` chunk ids are placeholders until the dengue pages are in `guidance.db`.

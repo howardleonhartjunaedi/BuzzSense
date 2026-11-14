@@ -34,7 +34,8 @@ commonMain/
               feature_spec.json), AcousticStore + KnnClassifier (sqlite-vec kNN, k=15, train split),
               WingbeatDetector (2 stages + Unsure band), DominantFrequencyBaseline (f0 rule)
   rag/        GuidanceStore (SQLite FTS5 + sqlite-vec/brute-force), HybridRetriever (RRF k=60),
-              GuidanceQueryBuilder (query from detection + weather only), PrecomputedQueryEmbedder
+              GuidanceQueryBuilder (query from detection + weather only; adds malaria terms when not Aedes),
+              PrecomputedQueryEmbedder
   guardrails/ SpeechGate, UntrustedFence, CanaryToken, ToolPermissions,
               HealthSafetyValidator, AlarmFatigueGuard
   llm/        FailoverPromptExecutor + ProviderChain (Gemini → Claude/OpenAI → LiteRT),
@@ -47,7 +48,8 @@ onnxShared/   SileroVad, OnnxE5Embedder (compiled into android + jvm)
 jvmMain/      JvmBuzzAlert + eval 7 (retrieval) command
 commonTest/   AcousticFeaturesTest (f0), GuardrailsAndRetrievalTest (guardrails, RRF, failover, redaction),
               BuzzAlertAgentTest (end-to-end graph runs with scripted providers)
-jvmTest/      FeatureParityTest (+ real-store kNN when env vars set), GeminiLiveTest (when GEMINI_API_KEY set)
+jvmTest/      FeatureParityTest (+ real-store kNN when env vars set), GeminiLiveTest (when GEMINI_API_KEY set),
+              GuidanceDbParityTest (when app/src/main/assets/guidance.db exists)
 ```
 
 ## Strategy graph
@@ -92,7 +94,7 @@ Koog sends the key as a `?key=` query parameter.
 ## Files the app must ship (`app/src/main/assets/`)
 
 `feature_spec.json` and `jumantik_rag.sqlite` (from `Audio File/data/rag/`),
-`guidance.db`, `silero_vad.onnx`. The app manifest declares `INTERNET` and
+`guidance.db` (built by `tools/guidance/build_guidance_db.py`, see its README), `silero_vad.onnx`. The app manifest declares `INTERNET` and
 `ACCESS_NETWORK_STATE` (cloud tiers, Open-Meteo, offline detection). Required: `libvec0.so` (sqlite-vec) in
 `app/src/main/jniLibs/<abi>/`. Optional: a `.litertlm` model in `filesDir/llm/`
 (on-device tier). Record at 8 kHz so no resampling is needed. The guidance DB schema is
@@ -103,7 +105,8 @@ query, so the phone does not need a SentencePiece tokenizer.
 
 - Try `GeminiKeySetup` on a phone (only checked on the JVM so far); move it to a real settings screen.
 - Real chunk ids in `FallbackChecklist` (currently placeholders).
-- The corpus build script (chunk → embed with e5 → write `guidance.db`).
+- Dengue guidance pages (WHO, CDC, PAHO, PR Health; EN + ES) for `guidance.db`: today it holds 17 English
+  malaria passages from the team's Indonesia review and one dengue passage (3M Plus).
 - `Thresholds` picked on validation domains (defaults are placeholders).
 - A smaller train-split store for the APK: the full `jumantik_rag.sqlite` is ~350 MB.
 

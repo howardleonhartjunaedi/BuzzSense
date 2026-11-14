@@ -67,12 +67,15 @@ class HealthSafetyValidator(
 
         // English + Spanish. Deliberately broad: a false block falls back to the fixed checklist.
         val DIAGNOSIS = listOf(
-            Regex("""\b(you|your (child|son|daughter|kid))\s+(have|has|got|probably have)\s+(dengue|zika|chikungunya)""", I),
-            Regex("""\b(tienes|tiene|tu hij[oa] tiene)\s+(dengue|zika|chikungu[ny]a)""", I),
+            Regex("""\b(you|your (child|son|daughter|kid))\s+(have|has|got|probably have)\s+(dengue|zika|chikungunya|malaria)""", I),
+            Regex("""\b(tienes|tiene|tu hij[oa] tiene)\s+(dengue|zika|chikungu[ny]a|malaria)""", I),
             Regex("""\bdiagnos(is|e|ed|tic)\b|\bdiagn[oó]stic""", I),
         )
         val MEDICINE = listOf(
             Regex("""\b(acetaminophen|paracetamol|ibuprofen|ibuprofeno|aspirin|aspirina|naproxen|tylenol|advil|motrin)\b""", I),
+            // Antimalarials and prophylaxis: the guidance corpus covers malaria, so the model could name them.
+            Regex("""\b(artemether|lumefantrine|artemisinin\w*|artesunate|primaquine|primaquina|chloroquine|cloroquina|atovaquone|proguanil|doxycycline|doxiciclina|mefloquine|mefloquina|tafenoquine|quinine|quinina)\b""", I),
+            Regex("""\b(chemo)?prophylaxis\b|\b(quimio)?profilaxis\b""", I),
             Regex("""\b\d+\s?(mg|ml|mcg)\b""", I),
             Regex("""\b(dose|dosage|dosis|tablet|pill|pastilla|antibiotic|antibi[oó]tico|medication|medicamento|medicine|medicina)s?\b""", I),
         )

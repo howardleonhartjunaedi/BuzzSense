@@ -1,0 +1,5 @@
+numpy>=2.0
+onnxruntime>=1.20
+tokenizers>=0.20
+sqlite-vec>=0.1.6
+huggingface_hub>=0.30

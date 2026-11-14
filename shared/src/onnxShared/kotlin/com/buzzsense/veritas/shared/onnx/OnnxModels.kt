@@ -71,9 +71,13 @@ class OnnxE5Embedder(
         val shape = longArrayOf(1, ids.size.toLong())
         OnnxTensor.createTensor(env, LongBuffer.wrap(ids), shape).use { idT ->
             OnnxTensor.createTensor(env, LongBuffer.wrap(mask), shape).use { maskT ->
+            // The Hugging Face ONNX export also requires token_type_ids (all zeros, single segment),
+            // as tools/guidance/build_guidance_db.py feeds it.
+            OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(ids.size)), shape).use { typeT ->
                 val inputs = buildMap {
                     put("input_ids", idT)
                     put("attention_mask", maskT)
+                    if ("token_type_ids" in s.inputNames) put("token_type_ids", typeT)
                 }
                 s.run(inputs).use { out ->
                     @Suppress("UNCHECKED_CAST")
@@ -89,6 +93,7 @@ class OnnxE5Embedder(
                     for (d in 0 until dimensions) pooled[d] /= norm
                     return pooled
                 }
+            }
             }
         }
     }

@@ -66,6 +66,11 @@ object GuidanceQueryBuilder {
         } else {
             if (es) "mosquito dentro de la casa prevención picaduras" else "mosquito indoors prevent bites"
         }
+        // Not Aedes: it may be a night-biting Anopheles (malaria) mosquito, so ask for nets and fever testing too.
+        if (detection.aedesAegypti != Verdict.YES) {
+            parts += if (es) "malaria Anopheles dormir bajo mosquitero tratado de noche prueba de malaria si hay fiebre"
+            else "malaria Anopheles sleep under treated bed net at night malaria test for fever"
+        }
         parts += if (es) "eliminar criaderos agua estancada recipientes mosquiteros repelente"
         else "eliminate breeding sites standing water containers screens repellent"
         if (weather != null && weather.precipitationMm > 0.5) {

@@ -50,6 +50,21 @@ class GuardrailsAndRetrievalTest {
     }
 
     @Test
+    fun malariaDiagnosisAndAntimalarialsAreRejected() {
+        val dx = draft("Sleep under a net" to "cdc-en-1", "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1",
+            summary = "Your child has malaria.")
+        val drug = draft("Ask for artemether-lumefantrine" to "cdc-en-1", "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1")
+        val prophylaxis = draft("Start chemoprophylaxis before travel" to "cdc-en-1", "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1")
+        assertTrue(validator.validate(dx, CHUNKS, canary).any { it is ValidationIssue.Diagnosis })
+        assertTrue(validator.validate(drug, CHUNKS, canary).any { it is ValidationIssue.Medicine })
+        assertTrue(validator.validate(prophylaxis, CHUNKS, canary).any { it is ValidationIssue.Medicine })
+        // Advice to get tested is allowed; it is not a diagnosis or a medicine.
+        val test = draft("Get a malaria blood test at the clinic today if anyone has a fever" to "cdc-en-1",
+            "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1")
+        assertTrue(validator.validate(test, CHUNKS, canary).isEmpty())
+    }
+
+    @Test
     fun canaryLeakIsRejected() {
         val d = draft("Empty containers ${canary.value}" to "cdc-en-1", "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1")
         assertTrue(validator.validate(d, CHUNKS, canary).contains(ValidationIssue.PromptLeak))

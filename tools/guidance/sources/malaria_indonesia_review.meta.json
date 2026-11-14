@@ -1,0 +1,5 @@
+{
+  "derived_from": "Malaria Prevention in High-Risk Mosquito Zones: An Evidence Review for Students (Indonesia Focus), team research document, 2026",
+  "licence": "Team paraphrase of the cited public source; see each chunk's url for the original and its terms",
+  "excluded": "Medicines, chemoprophylaxis regimens, vaccines and seasonal malaria chemoprevention: AGENTS.md forbids medicine or dosing in user-facing text, and HealthSafetyValidator rejects them."
+}

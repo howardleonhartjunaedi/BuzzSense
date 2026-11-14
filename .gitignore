@@ -26,3 +26,8 @@ replay_pid*.log
 /.idea/deviceManager.xml
 /.idea/deploymentTargetSelector.xml
 /.idea/artifacts/
+
+# guidance corpus builder: local venv and downloaded model
+/tools/guidance/.venv/
+/tools/guidance/models/
+/tools/guidance/**/__pycache__/

@@ -13,8 +13,11 @@ import kotlin.math.roundToInt
 internal object AlertPrompt {
 
     fun system(language: Language, fence: UntrustedFence, canary: CanaryToken): String = buildString {
-        appendLine("You write short dengue-prevention checklists for a family in San Juan, Puerto Rico, who just heard a mosquito indoors.")
+        appendLine("You write short mosquito-bite prevention checklists (dengue and malaria) for a family who just heard a mosquito indoors.")
         appendLine("Rules:")
+        appendLine("- If the mosquito is likely Aedes aegypti, focus on dengue: day-time bites and water containers.")
+        appendLine("- If it is not Aedes aegypti, it may be a night-biting malaria mosquito: prefer nets at night, standing water and testing for fever, when the documents support them.")
+        appendLine("- Never say that anyone has or will get a disease; a buzz only shows a mosquito is present.")
         appendLine("- Use ONLY the guidance documents provided. Every action must cite the id of the document it came from.")
         appendLine("- Give 3 to 5 concrete actions the family can do today at home.")
         appendLine("- Never diagnose anyone. Never mention medicines, treatments, doses or pills.")
