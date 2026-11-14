@@ -1,6 +1,5 @@
 package com.buzzsense.veritas.shared
 
-import com.buzzsense.veritas.shared.detector.AcousticFeatures
 import com.buzzsense.veritas.shared.guardrails.CanaryToken
 import com.buzzsense.veritas.shared.guardrails.HealthSafetyValidator
 import com.buzzsense.veritas.shared.guardrails.ToolNotPermittedException
@@ -15,7 +14,6 @@ import com.buzzsense.veritas.shared.model.Urgency
 import com.buzzsense.veritas.shared.rag.GuidanceStore
 import com.buzzsense.veritas.shared.rag.HybridRetriever
 import com.buzzsense.veritas.shared.rag.RankedHit
-import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -95,11 +93,12 @@ class GuardrailsAndRetrievalTest {
     }
 
     @Test
-    fun harmonicSumFindsTheWingbeatFundamental() {
-        val f = AcousticFeatures(TEST_SPEC)
-        // A pure tone is ambiguous for a harmonic sum (150/200/300 Hz tie); use 4 harmonics like a wingbeat.
-        val window = f.windows(harmonicSamples(f0 = 600.0), 8_000).first()
-        val hz = f.f0Hz(window)
-        assertTrue(abs(hz - 600f) < 3f, "got $hz")
+    fun providerErrorsNeverCarryTheApiKey() {
+        val fakeKey = "AQ." + "x".repeat(40)
+        val msg = "Status code: 400 for https://generativelanguage.googleapis.com/v1beta/models/m:generateContent?key=$fakeKey&alt=sse " +
+            "(echo: AIza${"y".repeat(35)}, sk-ant-${"z".repeat(30)})"
+        val clean = FailureClassifier.redactSecrets(msg)
+        assertFalse(clean.contains(fakeKey) || clean.contains("AIza") || clean.contains("sk-ant"), clean)
+        assertTrue(clean.contains("?key=REDACTED&alt=sse"), clean)
     }
 }

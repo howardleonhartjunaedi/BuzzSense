@@ -21,10 +21,14 @@ object CloudProviders {
 
     private val defaultFactory: KoogHttpClient.Factory by lazy { KtorKoogHttpClient.Factory() }
 
-    /** Tier 1: Gemini API on the free tier, with the user's own key. */
+    /**
+     * Tier 1: Gemini API (Google AI Studio key) on the free tier, with the user's own key.
+     * Default is 3.5 Flash-Lite: ~1 s per call in a live check (2026-11-14), while 2.5 Flash/Flash-Lite
+     * now answer 404 for new keys. Pass [GoogleModels.Gemini3_5Flash] for a stronger, slower draft.
+     */
     fun gemini(
         apiKey: String,
-        model: LLModel = GoogleModels.Gemini2_5Flash,
+        model: LLModel = GoogleModels.Gemini3_5FlashLite,
         httpClientFactory: KoogHttpClient.Factory = defaultFactory,
     ) = ProviderTier(
         id = ProviderTierId.GEMINI,

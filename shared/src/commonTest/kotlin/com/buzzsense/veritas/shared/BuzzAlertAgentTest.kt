@@ -24,7 +24,7 @@ import kotlin.time.Duration
 
 class BuzzAlertAgentTest {
 
-    private val model = GoogleModels.Gemini2_5Flash
+    private val model = GoogleModels.Gemini3_5FlashLite
 
     private fun engine(mosquito: Float, aedes: Float, vararg tiers: ProviderTier) = BuzzAlertEngine(
         detector = WingbeatDetector(AcousticFeatures(TEST_SPEC), FixedClassifier(mosquito, aedes), DominantFrequencyBaseline(425f..809f)),

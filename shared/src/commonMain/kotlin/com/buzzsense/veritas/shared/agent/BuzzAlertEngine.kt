@@ -96,7 +96,7 @@ class BuzzAlertEngine(
 
     private companion object {
         /** Only used when no provider is configured; the graph then always takes the fallback path. */
-        val PLACEHOLDER_MODEL: LLModel = GoogleModels.Gemini2_5Flash
+        val PLACEHOLDER_MODEL: LLModel = GoogleModels.Gemini3_5FlashLite
     }
 }
 

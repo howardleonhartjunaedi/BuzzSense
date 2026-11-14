@@ -47,6 +47,24 @@ object FailureClassifier {
         }
     }
 
+    /** Gemini sends the key as a `?key=` query parameter. */
+    private val KEY_QUERY_PARAM = Regex("""([?&]key=)[^&\s"']+""")
+
+    private val BARE_KEYS = listOf(
+        Regex("""\bAIza[0-9A-Za-z_\-]{20,}"""),        // Google API key
+        Regex("""\bAQ\.[0-9A-Za-z_\-]{20,}"""),        // Google AI Studio key
+        Regex("""\bsk-[0-9A-Za-z_\-]{16,}"""),         // Anthropic (sk-ant-…) / OpenAI
+    )
+
+    /**
+     * Provider error messages can echo the request URL, which for Gemini holds the
+     * API key. Run every message through this before it reaches a trace, log or UI.
+     */
+    fun redactSecrets(text: String): String =
+        BARE_KEYS.fold(KEY_QUERY_PARAM.replace(text) { it.groupValues[1] + "REDACTED" }) { acc, re ->
+            re.replace(acc, "REDACTED")
+        }
+
     fun fromStatus(status: Int): FailureKind = when (status) {
         401, 403 -> FailureKind.AUTH
         408, 429 -> FailureKind.TRANSIENT

@@ -7,6 +7,7 @@ Gradle needs a JDK: `export JAVA_HOME="/c/Program Files/Android/Android Studio/j
 |:---|:---|:---|
 | Test shared module | `./gradlew :shared:jvmTest` | Fast; runs `commonTest` on the JVM, incl. full graph runs with scripted providers |
 | Parity + real-store kNN | `JUMANTIK_RAG_DIR="O:/Veritas AI/Audio File/data/rag" SQLITE_VEC_LIB="O:/Veritas AI/Audio File/.venv/Lib/site-packages/sqlite_vec/vec0" ./gradlew :shared:jvmTest` | Without the env vars the real-store test is skipped |
+| Live Gemini check | `GEMINI_API_KEY=<AI Studio key> ./gradlew :shared:jvmTest` | Runs `GeminiLiveTest` (key check + one full graph run); skipped without the env var. Never write the key to a file |
 | Compile Android side | `./gradlew :shared:compileAndroidMain` | Catches LiteRT/Keystore/ONNX Android code |
 | Build app | `./gradlew :app:assembleDebug` | APK in `app/build/outputs/apk/debug/` |
 | Retrieval eval (eval 7) | Run `com.buzzsense.veritas.shared.eval.EvalHarnessKt` (jvmMain) with args `<artifactsDir> <queries.json> <results.jsonl>` | No Gradle run task yet; appends rows to the results table |
@@ -20,14 +21,19 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 - The strategy graph is fixed: detect → context → retrieve → compose → validate. Detect, context and retrieve stay deterministic. The LLM runs only in `compose`, via `requestLLMStructured<AlertDraft>()`, with `tools = emptyList()`.
 - Every path must reach `nodeFinish`. No mosquito, Unsure or speech must end the graph before any LLM call.
 - New tools are read-only Koog `Tool`s, called through `ToolGate`, and must be added to the node allowlist in `ToolPermissions`. Never add a share, message or write tool.
+- Tier 1 is `CloudProviders.gemini` (default `GoogleModels.Gemini3_5FlashLite`; 2.5 models return 404 for new keys). Check a model with `GeminiLiveTest` before changing the default.
+- Provider error text reaches traces and UI only through `FailureClassifier.redactSecrets` (Gemini puts the key in the URL).
 - Provider errors go through `FailureClassifier`; a failed validation calls `rejectLastAnswer()` so the retry uses the next tier. All tiers failing ends in `FallbackChecklist`, never an exception to the UI.
 
 ## local-constraints
 - `commonMain` must not use Android or JVM-only APIs. Android-only code goes in `androidMain`; ONNX code lives in `src/onnxShared/` and is compiled into both `androidMain` and `jvmMain`.
 - Detector features come only from `FeatureSpec` (`feature_spec.json`); `AcousticFeatures` must keep passing `FeatureParityTest`. When the spec changes, copy the new spec and re-export `src/jvmTest/resources/parity_fixture.json` with `Audio File/pipeline/export_parity_fixture.py`.
+- API keys enter the app only through `GeminiKeySetup` (`:app`) → `KeystoreApiKeyStore`; on a laptop only through env vars. No key in code, Gradle files, tests or logs.
+- `app/src/main/AndroidManifest.xml` must keep `INTERNET` and `ACCESS_NETWORK_STATE`; without them every cloud tier fails and `AndroidNetworkStatus` cannot see connectivity.
 - `AudioClip` stays in memory and is wiped in `finally`; never write audio to disk, logs or `DecisionTrace`.
 - `GuidanceStore` uses the bundled SQLite driver: FTS5 is always there, sqlite-vec only when `addExtension` succeeds. Keep the brute-force fallback working.
-- Add a `commonTest` case for every new guardrail, failover rule or graph edge.
+- Add a `commonTest` case for every new guardrail, failover rule or graph edge. Detector tests go in `AcousticFeaturesTest`, not in `GuardrailsAndRetrievalTest`.
+- Tests that call a real provider live in `jvmTest`, read the key from an env var and return early without it (see `GeminiLiveTest`).
 - Commit on the current branch (`master`); do not create branches unless asked.
 - Do not commit `MainActivity.kt` demo edits, `build/`, `.kotlin/` or per-user `.idea` files.
 

@@ -172,7 +172,7 @@ class FailoverPromptExecutor internal constructor(
                     throw e
                 } catch (e: Throwable) {
                     val kind = FailureClassifier.classify(e)
-                    log("failover", "${tier.id} failed ($kind): ${e.message?.lineSequence()?.firstOrNull { it.isNotBlank() }.orEmpty().take(120)}")
+                    log("failover", "${tier.id} failed ($kind): ${FailureClassifier.redactSecrets(e.message?.lineSequence()?.firstOrNull { it.isNotBlank() }.orEmpty()).take(120)}")
                     if (kind == FailureKind.TRANSIENT && attempt == 1) {
                         delay(chain.jitter(chain.policy().retryBaseDelay))
                         continue
