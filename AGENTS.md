@@ -26,6 +26,18 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 - Provider error text reaches traces and UI only through `FailureClassifier.redactSecrets` (Gemini puts the key in the URL).
 - Provider errors go through `FailureClassifier`; a failed validation calls `rejectLastAnswer()` so the retry uses the next tier. All tiers failing ends in `FallbackChecklist`, never an exception to the UI.
 
+## UI and design system (strict)
+Every UI you create or change in `:app` must use the BuzzSense design system. Sources of truth: `DESIGN.md` and the Stitch project "BuzzSense Mosquito Detector". Code: tokens in `ui/theme/`, components in `ui/components/`, browsable in `ui/gallery/ComponentGallery.kt` (the "Components" tab of `MainActivity`).
+- Read theme values only through `BuzzTheme.*` (`colorScheme`, `typography`, `shapes`, `spacing`, `colors`, `data`). Outside `ui/theme/`, never write `Color(0x…)`, raw `dp`/`sp` for spacing or type, or a `FontFamily`.
+- Build screens only from `Buzz*` components. Do not use raw Material 3 `Button`, `Card`, `TopAppBar`, `NavigationBar`, `Checkbox`, `Switch`, `TextField`, `ModalBottomSheet` or `AlertDialog` in screens; their `Buzz*` wrappers exist.
+- If a pattern is missing, first add a `Buzz*` component in `ui/components/` (stateless, `modifier: Modifier = Modifier` as the first optional parameter, slots for content), then use it in the screen. Do not style one-off composables inside a screen.
+- Icons come from `BuzzIcons`; add new ones there as vector paths. No icon library.
+- Keep the flat system: no shadows or tonal elevation, borders, divider lines, gradients or ripples (tap feedback is `Modifier.pressAlpha`). Status tags are square-cornered, never pills.
+- Result colors (`BuzzColors.resultSafe/Watch/Hazard`) are used only through `ResultKind` and always with an icon and words, never color alone.
+- User-facing text goes in `res/values/strings.xml`. Result and write-up screens show `BuzzDisclaimer`.
+- Every new component gets `@BuzzPreviews` (light + dark) and a sample in `ComponentGallery`; every new screen gets `@BuzzScreenPreviews`.
+- Ask before adding or changing a token (color, type style, shape, spacing). A token change updates `DESIGN.md` and `ui/theme/` together; spacing stays on 4dp multiples.
+
 ## local-constraints
 - `commonMain` must not use Android or JVM-only APIs. Android-only code goes in `androidMain`; ONNX code lives in `src/onnxShared/` and is compiled into both `androidMain` and `jvmMain`.
 - Detector features come only from `FeatureSpec` (`feature_spec.json`); `AcousticFeatures` must keep passing `FeatureParityTest`. When the spec changes, copy the new spec and re-export `src/jvmTest/resources/parity_fixture.json` with `Audio File/pipeline/export_parity_fixture.py`.
@@ -45,3 +57,4 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 - `guidance.db` holds 17 English malaria passages (Indonesia review); only one (3M Plus) covers dengue. WHO/CDC/PAHO/PR Health dengue pages in English and Spanish are still to add.
 - Retrieval: when the mosquito is not Aedes, `GuidanceQueryBuilder` adds malaria terms (nets, night, fever test); the fever-test passage still misses the top 5 for those queries. Tune it with eval 7, not by editing passage text.
 - `FallbackChecklist` chunk ids are placeholders until the dengue pages are in `guidance.db`.
+- UI: only the Detect flow is built (~8 of 80 Stitch screens); Learn, Map and About are placeholders. `BuzzSenseApp.onRunDetection` returns a demo result and the checklist uses `SampleChecklist` until the recorder and `BuzzAlertEngine` are wired in.
