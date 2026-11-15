@@ -1,0 +1,33 @@
+*BuzzAlert progress update* 🦟
+
+Quick idea of the app: you record a mosquito's buzz on your phone, the app guesses if it's the dengue mosquito (Aedes aegypti), and then gives a simple prevention checklist that a parent checks before sharing.
+
+*🔎 Research*
+
+We read up on this topic first: how mosquitoes can be told apart by the sound of their wings, which mosquitoes carry dengue and malaria, and what trusted health groups say about prevention. We only use public sound collections and public health sources.
+
+*🎨 Design: finished*
+
+1. Designed the full look of the app: colours, fonts, buttons, cards and icons (the "design system").
+2. Designed every screen of the app.
+3. Built the main "Detect" screens in the app, plus a page showing all the building blocks so every screen looks the same.
+
+*🤖 AI work: finished*
+
+1. Built the app's "brain": it listens to the buzz, decides what mosquito it is, checks the weather, finds trusted tips, and writes the checklist.
+2. Made sure the phone handles the sound exactly the way our research code does, so the results match.
+3. Connected the AI services that write the checklist. Gemini comes first, Claude and OpenAI are backups, and a small model can run on the phone itself (Google's Gemma) so it still works with no internet.
+4. Kept your privacy safe: the AI only gets the result (like "likely Aedes") and the weather, never the recording or your location.
+5. Fixed a hidden bug so every AI understands the answer format the same way, and added tests so it stays fixed.
+6. Added a small library of trusted health tips. Right now it's mostly about malaria, from a research review on Indonesia.
+
+*⏭️ Still to do*
+
+• Put all the screens together in the app in the right order (designs are done, the arrangement isn't yet)
+• Connect the real recorder and the AI brain to the screens (right now the Detect screen shows a sample result)
+• Test the offline AI on a real phone
+• Add dengue tips from WHO, CDC, PAHO and Puerto Rico Health (in English and Spanish)
+• Make a smaller version of the sound database so it fits inside the app
+• Pick the final detection settings using proper test data
+
+_This project is a prototype and is not medical advice._

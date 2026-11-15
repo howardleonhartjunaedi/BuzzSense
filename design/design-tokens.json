@@ -1,0 +1,110 @@
+{
+  "$name": "BuzzAlert / Jumantik design tokens",
+  "$version": "1.0.0",
+  "$note": "Source of truth for app/ui/theme/*.kt. Units: dp for size, sp for type. All text pairs meet WCAG AA (>= 4.5:1); chart marks >= 3:1.",
+
+  "color": {
+    "light": {
+      "bg":                   "#F7F5F0",
+      "surface":              "#FFFFFF",
+      "surfaceAlt":           "#EEEBE3",
+      "border":               "#D8D3C7",
+      "ink":                  "#1B2421",
+      "inkMuted":             "#4F5B57",
+      "primary":              "#0F5F57",
+      "onPrimary":            "#FFFFFF",
+      "primaryContainer":     "#CDE8E2",
+      "onPrimaryContainer":   "#08332E",
+      "focus":                "#0F5F57",
+
+      "attention":            "#9A3B1F",
+      "attentionContainer":   "#F6DDD3",
+      "caution":              "#8A5A00",
+      "cautionContainer":     "#F7E7C1",
+      "calm":                 "#45556A",
+      "calmContainer":        "#DEE4EC"
+    },
+    "dark": {
+      "bg":                   "#111614",
+      "surface":              "#182019",
+      "surfaceAlt":           "#212A27",
+      "border":               "#33403C",
+      "ink":                  "#E6ECE9",
+      "inkMuted":             "#A9B5B0",
+      "primary":              "#7FD1C4",
+      "onPrimary":            "#00332D",
+      "primaryContainer":     "#14463F",
+      "onPrimaryContainer":   "#CDE8E2",
+      "focus":                "#7FD1C4",
+
+      "attention":            "#F0A38A",
+      "attentionContainer":   "#4A2317",
+      "caution":              "#F2C46B",
+      "cautionContainer":     "#3F2E07",
+      "calm":                 "#B4C2D3",
+      "calmContainer":        "#283340"
+    },
+    "class3": {
+      "$note": "Categorical colours for the 'How it decided' vote chart. Always paired with the text label.",
+      "light": { "aedes": "#B4472A", "culex": "#2D6FA3", "other_mosquito": "#7A5BA6", "none": "#8C8C84" },
+      "dark":  { "aedes": "#E58A6C", "culex": "#6FA8DC", "other_mosquito": "#B39DDB", "none": "#9A9A92" }
+    }
+  },
+
+  "semantic": {
+    "$note": "Map domain enums to status roles. Colour is never the only signal: each also has an icon and a word.",
+    "verdict.aedes.YES":    { "role": "attention", "icon": "warning_amber", "label_en": "Likely Aedes aegypti",  "label_es": "Probablemente Aedes aegypti" },
+    "verdict.aedes.UNSURE": { "role": "caution",   "icon": "help_outline",  "label_en": "Not sure",              "label_es": "No es seguro" },
+    "verdict.aedes.NO":     { "role": "calm",      "icon": "check_circle_outline", "label_en": "Probably not Aedes", "label_es": "Probablemente no es Aedes" },
+    "verdict.mosquito.NO":  { "role": "calm",      "icon": "graphic_eq",    "label_en": "No mosquito heard",     "label_es": "No se escuchó un mosquito" },
+    "urgency.HIGH":         { "role": "attention" },
+    "urgency.MEDIUM":       { "role": "caution" },
+    "urgency.LOW":          { "role": "calm" },
+    "risk.HIGH":            { "role": "attention" },
+    "risk.MEDIUM":          { "role": "caution" },
+    "risk.LOW":             { "role": "calm" }
+  },
+
+  "typography": {
+    "family": {
+      "ui":   "Atkinson Hyperlegible Next",
+      "mono": "JetBrains Mono",
+      "fallback": "sans-serif"
+    },
+    "scale": {
+      "display":  { "size": 32, "line": 40, "weight": 700, "tracking": -0.25 },
+      "headline": { "size": 24, "line": 32, "weight": 700, "tracking": 0 },
+      "title":    { "size": 20, "line": 28, "weight": 600, "tracking": 0 },
+      "body":     { "size": 16, "line": 24, "weight": 400, "tracking": 0.15 },
+      "bodySmall":{ "size": 14, "line": 20, "weight": 400, "tracking": 0.2 },
+      "label":    { "size": 14, "line": 20, "weight": 600, "tracking": 0.1 },
+      "caption":  { "size": 12, "line": 16, "weight": 400, "tracking": 0.3 },
+      "data":     { "size": 14, "line": 20, "weight": 500, "tracking": 0, "family": "mono", "features": "tnum" }
+    },
+    "m3Mapping": {
+      "displaySmall": "display", "headlineSmall": "headline", "titleLarge": "title",
+      "bodyLarge": "body", "bodyMedium": "bodySmall", "labelLarge": "label", "bodySmall": "caption"
+    }
+  },
+
+  "space": { "0": 0, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "16": 64 },
+  "layout": { "screenGutter": 16, "cardPadding": 16, "sectionGap": 24, "listItemGap": 8, "maxContentWidth": 600 },
+
+  "radius": { "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 28, "full": 999 },
+  "radiusUsage": { "chip": "sm", "button": "full", "card": "md", "field": "sm", "sheet": "xl", "recordButton": "full" },
+
+  "elevation": {
+    "$note": "Flat by default; separate with border + surface tone. Shadow only for things that float.",
+    "0": "none",
+    "1": "0 1px 2px rgba(27,36,33,0.08)",
+    "2": "0 4px 12px rgba(27,36,33,0.12)"
+  },
+
+  "size": { "touchMin": 48, "iconSm": 18, "icon": 24, "recordButton": 96, "progressStroke": 4 },
+
+  "motion": {
+    "duration": { "fast": 120, "base": 200, "slow": 320 },
+    "easing": { "standard": "cubic-bezier(0.2, 0, 0, 1)", "exit": "cubic-bezier(0.3, 0, 1, 1)" },
+    "listeningPulse": { "period": 1600, "scale": [1.0, 1.12], "note": "Only while recording. Disabled when reduce-motion is on." }
+  }
+}
