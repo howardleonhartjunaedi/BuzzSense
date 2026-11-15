@@ -38,3 +38,4 @@ replay_pid*.log
 
 # Python bytecode (pipeline/, tools/)
 __pycache__/
+/tools/guidance/.build/

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detector Rebuild v3</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1c1c1a;--muted:#6b6a64;--line:#e3e1da;--accent:#2f6b4f;--warn:#a35a00;--bad:#b3261e;--chip:#eeede7;--old:#8a8880}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9b9a93;--line:#33322e;--accent:#6fbf94;--warn:#e0a043;--bad:#f2867d;--chip:#2a2a27;--old:#77756e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.status{font-weight:600}.done{color:var(--accent)}.running{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.tile,.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.tile b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.tile span{color:var(--muted);font-size:12px}
+.panel{margin-bottom:14px;overflow-x:auto}
+.bar{height:8px;background:var(--chip);border-radius:4px;overflow:hidden;margin:6px 0 2px}.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;border-top:0}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}.ok{color:var(--accent);font-weight:600}.bad{color:var(--bad)}.chosen td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.meter{display:inline-block;width:70px;height:6px;background:var(--chip);border-radius:3px;vertical-align:middle;margin-left:6px;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+.meter s{position:absolute;top:-3px;bottom:-3px;left:80%;border-left:2px solid var(--ink);opacity:.5}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto}
+.goal{font-size:13px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>Detector rebuild v3: every raw window, high-resolution spectrum</h1>
+      <div class="goal">Goal: Aedes recall ≥ 80% (the marker on each bar), Aedes false alarms ≤ 5%, compared with the v2 store in the app today.</div></div>
+    <div><span id="status" class="status running">waiting…</span> <span id="elapsed" class="muted"></span></div>
+  </div>
+  <div class="panel">
+    <div id="stage"><b>…</b></div>
+    <div class="muted" id="sub1">BioDCASE clips</div><div class="bar"><i id="b1"></i></div>
+    <div class="muted" id="sub2">HumBugDB recordings (every window)</div><div class="bar"><i id="b2"></i></div>
+  </div>
+  <div class="grid" id="tiles"></div>
+  <div class="panel"><h2>Final test (official test split, run once)</h2><div id="test" class="muted">after tuning</div></div>
+  <div class="panel"><h2>Tuning: leave one recording site out (D1, D3, D4), average</h2>
+    <table><thead><tr><th>Features | HumBugDB windows in index</th><th class="n">Dims</th><th class="n">Aedes recall</th><th class="n">Aedes false alarms</th><th class="n">Accuracy</th><th class="n">Balanced recall</th></tr></thead><tbody id="lodo"></tbody></table>
+    <div class="muted" id="notes"></div></div>
+  <div class="panel"><h2>Log</h2><div class="log" id="log"></div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const pct=v=>v==null?"–":(100*v).toFixed(1)+"%";
+const meter=v=>v==null?"":`<span class="meter"><i style="width:${100*v}%"></i><s></s></span>`;
+function row(r,chosen){return `<tr class="${r.variant===chosen?"chosen":""}"><td>${esc(r.variant)}${r.variant===chosen?' <span class="ok">chosen</span>':""}</td><td class="n">${r.dims}</td>
+ <td class="n">${pct(r.aedes_recall)}${meter(r.aedes_recall)}</td><td class="n ${r.aedes_false_alarm>0.05?"bad":""}">${pct(r.aedes_false_alarm)}</td>
+ <td class="n">${pct(r.class3_acc)}</td><td class="n">${pct(r.balanced_recall)}</td></tr>`}
+function metrics(m){return `<td class="n">${m.n.toLocaleString()}</td><td class="n">${pct(m.aedes_recall)}${meter(m.aedes_recall)}</td><td class="n">${pct(m.aedes_false_alarm)}</td><td class="n">${pct(m.class3_acc)}</td>`}
+function render(s){
+  $("status").textContent=s.status;$("status").className="status "+s.status;
+  $("elapsed").textContent=`${Math.floor(s.elapsed_s/60)} min ${s.elapsed_s%60} s · updated ${s.updated}`;
+  $("stage").innerHTML=`<b>${esc(s.stage)}</b>`;
+  const e=s.extract||{};
+  if(e.biodcase_total){$("b1").style.width=100*e.biodcase_done/e.biodcase_total+"%";$("sub1").textContent=`BioDCASE clips ${e.biodcase_done.toLocaleString()} / ${e.biodcase_total.toLocaleString()}`}
+  if(e.humbug_total){$("b2").style.width=100*e.humbug_done/e.humbug_total+"%";$("sub2").textContent=`HumBugDB recordings ${e.humbug_done.toLocaleString()} / ${e.humbug_total.toLocaleString()} (${e.humbug_hours} h, every 0.62 s window)`}
+  const c=s.counts||{};
+  $("tiles").innerHTML=[[ (c.windows||e.windows||0).toLocaleString(),"windows scanned"],
+    [c.humbug_all?c.humbug_all.toLocaleString():"–","HumBugDB windows now"],[c.humbug_v2_cap?c.humbug_v2_cap.toLocaleString():"–","HumBugDB windows in v2"],
+    ["80 → 288","numbers kept per window (v2 → v3)"],[e.errors??"–","unreadable files"]]
+    .map(([b,t])=>`<div class="tile"><b>${b}</b><span>${t}</span></div>`).join("");
+  $("lodo").innerHTML=(s.lodo||[]).map(r=>row(r,s.chosen)).join("");
+  $("notes").textContent=(s.notes||[]).join(" · ");
+  if(s.test&&s.test.length){
+    $("test").innerHTML=`<table><thead><tr><th>Store</th><th>Scope</th><th class="n">Queries</th><th class="n">Aedes recall</th><th class="n">False alarms</th><th class="n">Accuracy</th></tr></thead><tbody>`+
+      s.test.map(t=>`<tr><td rowspan="3"><b>${esc(t.variant)}</b><div class="muted">${t.dims} dims, index ${t.index_size.toLocaleString()} windows</div></td><td>every test window</td>${metrics(t.overall)}</tr>
+        <tr><td>same windows v2 sees</td>${metrics(t.on_v2_queries)}</tr><tr><td>per HumBugDB recording (vote)</td>${metrics(t.recording_level)}</tr>`).join("")+
+      (s.baselines||[]).map(b=>`<tr><td colspan="2" class="muted">${esc(b.method)}</td>${metrics(b)}</tr>`).join("")+`</tbody></table>`+
+      `<h2 style="margin-top:14px">Per recording site</h2><table><thead><tr><th>Site</th>${s.test.map(t=>`<th class="n" colspan="3">${esc(t.variant.split(" |")[0])}: recall · false alarms · accuracy</th>`).join("")}</tr></thead><tbody>`+
+      s.test[0].per_domain.map(d=>`<tr><td>${esc(d.domain)} <span class="muted">(${d.n})</span></td>`+s.test.map(t=>{const x=t.per_domain.find(p=>p.domain===d.domain)||{};return `<td class="n">${pct(x.aedes_recall)}</td><td class="n">${pct(x.aedes_false_alarm)}</td><td class="n">${pct(x.class3_acc)}</td>`}).join("")+`</tr>`).join("")+`</tbody></table>`;
+  }
+  $("log").textContent=(s.log||[]).join("\n");
+}
+async function poll(){try{const r=await fetch("v3.json?t="+Date.now(),{cache:"no-store"});if(r.ok){const s=JSON.parse((await r.text()).replace(/\bNaN\b/g,"null"));render(s);if(s.status==="done")return setTimeout(poll,5000)}}catch(e){}setTimeout(poll,1000)}
+poll();
+</script>
+</body>
+</html>

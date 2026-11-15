@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guidance DB Build</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1c1c1a;--muted:#6b6a64;--line:#e3e1da;--accent:#2f6b4f;--warn:#a35a00;--bad:#b3261e;--chip:#eeede7}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9b9a93;--line:#33322e;--accent:#6fbf94;--warn:#e0a043;--bad:#f2867d;--chip:#2a2a27}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.status{font-weight:600}.status.done{color:var(--accent)}.status.failed{color:var(--bad)}.status.running{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tile,.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.tile b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.tile span{color:var(--muted);font-size:12px}
+.panel{margin-bottom:14px}
+.stages{display:flex;flex-wrap:wrap;gap:6px}
+.stage{padding:3px 8px;border-radius:4px;background:var(--chip);font-size:12px;color:var(--muted)}
+.stage.running{color:var(--warn);font-weight:600}.stage.done{color:var(--accent)}.stage.failed{color:var(--bad);font-weight:600}
+.bar{height:8px;background:var(--chip);border-radius:4px;overflow:hidden;margin:8px 0 2px}.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.hist{display:flex;align-items:flex-end;gap:3px;height:90px}.hist div{flex:1;background:var(--accent);opacity:.8;min-height:1px;border-radius:2px 2px 0 0}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;border-top:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right}
+.id{font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all}
+.txt{white-space:pre-wrap;color:var(--ink)}
+.muted{color:var(--muted)}.ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.chip{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--chip);color:var(--muted);margin-left:4px}
+a{color:var(--accent)}
+.scroll{max-height:420px;overflow:auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}td.hide,th.hide{display:none}}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>guidance.db build</h1>
+    <div><span id="status" class="status">waiting for build…</span> <span id="elapsed" class="muted"></span></div>
+  </div>
+
+  <div class="panel">
+    <div class="stages" id="stages"></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="muted" id="barlabel">&nbsp;</div>
+  </div>
+
+  <div class="grid" id="tiles"></div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Coverage: is any source text lost?</h2>
+      <div id="coverage" class="muted">after chunking</div>
+    </div>
+    <div class="panel">
+      <h2>Tokens per chunk <span class="muted" id="tokmeta"></span></h2>
+      <div class="hist" id="hist"></div>
+      <div class="axis"><span>0</span><span id="histmax"></span></div>
+      <div class="muted" style="margin-top:6px">Embedder limit 496 (512 minus prefix). Nothing above it is ever truncated; the build fails instead.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Chunks <span class="muted" id="chunkcount"></span></h2>
+    <input id="q" placeholder="Filter by id, title or text…">
+    <div class="scroll"><table><thead><tr><th>Chunk</th><th class="num">Tokens</th><th class="hide">Source link</th></tr></thead><tbody id="chunks"></tbody></table></div>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Left out on purpose <span class="muted" id="excount"></span></h2>
+      <div class="scroll"><table><tbody id="excluded"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h2>Retrieval check (top 5 per agent query)</h2>
+      <div id="never" class="muted"></div>
+      <div class="scroll"><table><tbody id="retrieval"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="panel"><h2>Log</h2><div class="log" id="log"></div></div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let last = null, filter = "";
+$("q").addEventListener("input", e => { filter = e.target.value.toLowerCase(); if (last) renderChunks(last); });
+
+function renderChunks(s) {
+  const rows = s.chunks.filter(c => !filter || (c.id + " " + c.title + " " + c.text).toLowerCase().includes(filter));
+  $("chunkcount").textContent = `${rows.length} of ${s.chunks.length}`;
+  $("chunks").innerHTML = rows.map(c => `<tr>
+    <td><div class="id">${esc(c.id)}${c.origin.endsWith(".jsonl") ? '<span class="chip">curated</span>' : ""}${c.inherited_citation ? '<span class="chip">citation from section</span>' : ""}</div>
+      <div><b>${esc(c.title)}</b></div><div class="txt">${esc(c.text)}</div></td>
+    <td class="num">${c.tokens ?? ""}</td>
+    <td class="hide">${(c.cites || [c.url]).map((u, i) => `<div><a href="${esc(u)}" target="_blank" rel="noopener">${i ? "also" : "link"}: ${esc(new URL(u).hostname)}</a></div>`).join("")}</td></tr>`).join("");
+}
+
+function render(s) {
+  const changedChunks = !last || last.chunks.length !== s.chunks.length;
+  last = s;
+  const st = $("status"); st.textContent = s.status; st.className = "status " + s.status;
+  $("elapsed").textContent = `${(s.updated - s.started).toFixed(1)} s` + (s.status === "running" ? ` · ${s.current}` : "");
+  $("stages").innerHTML = Object.entries(s.stages).map(([k, v]) => `<span class="stage ${v}">${esc(k)}</span>`).join("");
+  const done = Object.values(s.stages).filter(v => v === "done").length, total = Object.keys(s.stages).length;
+  let frac = done / total, label = `${done} of ${total} stages`;
+  if (s.current === "embed chunks" && s.stages["embed chunks"] === "running" && s.embed.total) {
+    frac = (done + s.embed.done / s.embed.total) / total; label = `embedding chunk ${s.embed.done} of ${s.embed.total}`;
+  } else if (s.current === "embed queries" && s.stages["embed queries"] === "running" && s.queries.total) {
+    frac = (done + s.queries.done / s.queries.total) / total; label = `embedding query ${s.queries.done} of ${s.queries.total}`;
+  }
+  $("bar").style.width = (100 * frac).toFixed(1) + "%"; $("barlabel").textContent = label;
+
+  const toks = s.chunks.map(c => c.tokens).filter(Boolean).sort((a, b) => a - b);
+  const cov = s.coverage[0];
+  const md = s.chunks.filter(c => !c.origin.endsWith(".jsonl")).length;
+  $("tiles").innerHTML = [
+    [s.chunks.length || "–", "chunks in total"],
+    [md || "–", "from the full review"],
+    [s.chunks.length ? s.chunks.length - md : "–", "curated passages kept"],
+    [cov ? `${cov.in_chunks}/${cov.sentences - cov.left_out}` : "–", "review sentences in chunks"],
+    [s.excluded.length + s.skipped.length || "–", "left out on purpose"],
+    [toks.length ? toks[Math.floor(toks.length / 2)] : "–", "median tokens"],
+    [s.result ? s.result.kb + " KB" : "–", "guidance.db size"],
+  ].map(([b, t]) => `<div class="tile"><b>${b}</b><span>${t}</span></div>`).join("");
+
+  if (cov) {
+    const ok = cov.missing.length === 0;
+    $("coverage").innerHTML = `<div class="${ok ? "ok" : "bad"}"><b>${ok ? "No text lost." : cov.missing.length + " sentences missing!"}</b></div>
+      <div>${cov.sentences} sentences in ${esc(cov.source)}: <b>${cov.in_chunks}</b> are in a chunk word for word, ${cov.left_out} were left out on purpose (listed below), ${cov.missing.length} missing.</div>
+      <div class="muted">Chunks break only between sentences, list items or table rows. Only markup is removed: citation markers and bold/italic.</div>
+      ${cov.missing.map(m => `<div class="bad">• ${esc(m)}</div>`).join("")}`;
+  }
+  if (toks.length) {
+    const max = Math.max(...toks), bins = 16, w = Math.ceil((max + 1) / bins), h = new Array(bins).fill(0);
+    toks.forEach(t => h[Math.min(bins - 1, Math.floor(t / w))]++);
+    const top = Math.max(...h);
+    $("hist").innerHTML = h.map((n, i) => `<div title="${i * w}–${(i + 1) * w - 1}: ${n}" style="height:${100 * n / top}%"></div>`).join("");
+    $("histmax").textContent = max; $("tokmeta").textContent = `min ${toks[0]} · max ${max}`;
+  }
+  if (changedChunks || !filter) renderChunks(s);
+  $("excount").textContent = `${s.excluded.length} sentences, ${s.skipped.length} blocks`;
+  $("excluded").innerHTML = s.skipped.map(k => `<tr><td><div class="muted">${esc(k.where)} · ${k.lines} lines</div><div class="warn">${esc(k.reason)}</div><div class="txt muted">${esc(k.text)}</div></td></tr>`).join("") +
+    s.excluded.map(e => `<tr><td><div class="muted">${esc(e.where)}</div><div class="warn">${esc(e.reason)}</div><div class="txt">${esc(e.text)}</div></td></tr>`).join("");
+  $("never").innerHTML = s.retrieval.length ? `${s.never_retrieved.length} chunks never reach a top 5` : "after the build";
+  $("retrieval").innerHTML = s.retrieval.map(r => `<tr><td><div>${esc(r.query)}</div><div class="id muted">${r.top.map(esc).join("<br>")}</div></td></tr>`).join("");
+  $("log").textContent = s.log.map(l => `${l.t.toFixed(2).padStart(7)}s  ${l.msg}`).join("\n");
+}
+
+async function poll() {
+  try {
+    const r = await fetch(".build/progress.json?t=" + Date.now(), {cache: "no-store"});
+    if (r.ok) { const s = await r.json(); render(s); if (s.status !== "running") return setTimeout(poll, 3000); }
+  } catch (e) { /* build not started yet */ }
+  setTimeout(poll, 400);
+}
+poll();
+</script>
+</body>
+</html>

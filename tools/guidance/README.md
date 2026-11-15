@@ -37,23 +37,51 @@ the app's own code and fails if the query templates in this script and
   `id, source, url, title, lang (en|es), text` and optionally `topic, region, vector,
   evidence`. An optional `<name>.meta.json` sidecar supplies `derived_from` and `licence`.
   Ids are cited by the LLM and by `FallbackChecklist`, so never rename a shipped id.
-- **Saved pages:** add a `.md` file with front matter (`id_prefix, source, url, title,
-  lang, licence`). It is chunked on headings, then into windows of about 400 tokens with
-  60 tokens of overlap.
+- **Saved pages and reviews:** add a `.md` file with front matter (`id_prefix, source, title,
+  lang, licence`, optional `url, topic, region, vector, evidence, derived_from`). It is
+  chunked by its own structure, never inside a sentence:
+  - a paragraph is one chunk; a bold lead (`**House screening.**`) becomes part of the title;
+  - a list stays with the paragraph or bold label that introduces it; a list with no intro
+    gives one chunk per item;
+  - a ranked table gives one chunk per row (`Header: value; …`); a comparison table (empty
+    first header cell) stays whole;
+  - only a block over 380 tokens is split, at sentence boundaries (~260 tokens, one
+    sentence of overlap).
+
+  Only markup is removed (citation markers, bold/italic). Each chunk's `url` is the first
+  source it cites (numbered `\[n\]` markers resolved against the file's `## Sources` list);
+  a chunk that cites nothing takes the last citation in its section, and the build fails if
+  there is none. All cited links go in the `cites` column. Front matter can leave text out:
+  `skip_sections` (headings or bold leads), `skip_starts` (paragraphs or sentences starting
+  with a phrase) and `exclude_pattern` (a regex, on top of the medicine filter). A paragraph
+  or item that loses more than half its sentences is dropped whole, never left as a
+  fragment.
+
+## Progress dashboard
+
+The build writes `.build/progress.json` (git-ignored). To watch it, serve this folder and
+open the dashboard:
+
+```bash
+.venv/Scripts/python.exe -I -m http.server 8765 --bind 127.0.0.1   # then open http://127.0.0.1:8765/dashboard.html
+```
+
+It shows the stages, the embedding progress, every chunk with its tokens and source links,
+everything left out and why, the top 5 per agent query, and a coverage check. That check
+fails loudly if any sentence of a `.md` source is neither in a chunk word for word nor
+listed as left out.
 
 ## Current corpus
 
-`sources/malaria_indonesia_review.jsonl` has 17 English passages paraphrased from the
-team's malaria evidence review (Indonesia focus). Each passage cites the primary source
-behind its finding (Cochrane, WHO, Kemenkes, CDC and others). Medicines, prophylaxis
-regimens, vaccines and SMC are left out on purpose. Only one passage is about dengue
-(3M Plus), so the San Juan dengue alert still needs WHO, CDC, PAHO and PR Health dengue
-pages, in English and Spanish.
+- `sources/malaria_indonesia_review.md`: the team's full malaria evidence review (Indonesia
+  focus), 39 chunks. 159 of its 195 sentences are in chunks word for word. 36 are left out
+  on purpose: medicines, chemoprophylaxis, SMC, vaccines, the two disclaimers and the
+  hackathon notes; the reference lists are skipped too. Citation markers were added to the
+  lines that cited nothing (listed in its front matter), and no text was changed.
+- `sources/malaria_indonesia_review.jsonl`: the 17 earlier hand-written passages from the
+  same review. They are kept because their ids are shipped citations.
 
-For a mosquito that is not Aedes, `GuidanceQueryBuilder` adds malaria terms, so those
-queries retrieve the net, biting-time and house-screening passages. Five passages are
-still never in a top 5: the Sumba trial, travel, indoor spraying, net use and the
-Indonesia burden passage. The fever-test passage is retrieved only for Spanish Aedes
-queries.
+Only the 3M Plus passage and the malaria-vs-dengue rows cover dengue, so the San Juan
+dengue alert still needs WHO, CDC, PAHO and PR Health dengue pages in English and Spanish.
 
 This project is a prototype and is not medical advice.
