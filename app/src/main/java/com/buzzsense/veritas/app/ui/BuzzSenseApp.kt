@@ -35,6 +35,7 @@ import com.buzzsense.veritas.app.ui.detect.DetectStep
 import com.buzzsense.veritas.app.ui.detect.DetectUiState
 import com.buzzsense.veritas.app.ui.detect.DetectViewModel
 import com.buzzsense.veritas.app.ui.detect.DetectionUi
+import com.buzzsense.veritas.app.ui.gallery.ComponentGallery
 import com.buzzsense.veritas.app.ui.screens.AnalyzingScreen
 import com.buzzsense.veritas.app.ui.screens.CreditsScreen
 import com.buzzsense.veritas.app.ui.screens.LearnScreen
@@ -87,20 +88,27 @@ fun BuzzSenseApp(
 ) {
     val navItems = rememberBuzzNavItems()
     var selectedTab by rememberSaveable { mutableStateOf(BuzzTabs.DETECT) }
-    var showSettings by rememberSaveable { mutableStateOf(false) }
+    // Sub-page opened from Credits: Settings or the Design system gallery; null = Credits itself.
+    var creditsPage by rememberSaveable { mutableStateOf<String?>(null) }
     var showTips by remember { mutableStateOf(false) }
     var openAlert by remember { mutableStateOf<AlertUi?>(null) }
 
-    BackHandler(enabled = showSettings) { showSettings = false }
+    BackHandler(enabled = creditsPage != null) { creditsPage = null }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = BuzzTheme.colorScheme.background,
         topBar = {
-            if (selectedTab == BuzzTabs.CREDITS && showSettings) {
+            val page = creditsPage
+            if (selectedTab == BuzzTabs.CREDITS && page != null) {
                 BuzzTopAppBar(
-                    navigation = { BuzzBackButton(onClick = { showSettings = false }) },
-                    title = { Text(stringResource(R.string.settings_title), style = BuzzTheme.typography.titleLarge) },
+                    navigation = { BuzzBackButton(onClick = { creditsPage = null }) },
+                    title = {
+                        Text(
+                            stringResource(if (page == CREDITS_DESIGN) R.string.credits_design_title else R.string.settings_title),
+                            style = BuzzTheme.typography.titleLarge,
+                        )
+                    },
                 )
             } else {
                 BuzzTopAppBar()
@@ -112,7 +120,7 @@ fun BuzzSenseApp(
                 selectedKey = selectedTab,
                 onSelect = {
                     selectedTab = it.key
-                    showSettings = false
+                    creditsPage = null
                 },
             )
         },
@@ -120,16 +128,17 @@ fun BuzzSenseApp(
         val contentModifier = Modifier.padding(padding)
         when (selectedTab) {
             BuzzTabs.LEARN -> LearnScreen(onOpenUrl = onOpenUrl, modifier = contentModifier)
-            BuzzTabs.CREDITS ->
-                if (showSettings && settingsActions != null) {
+            BuzzTabs.CREDITS -> when {
+                creditsPage == CREDITS_SETTINGS && settingsActions != null ->
                     SettingsScreen(settings, settingsActions, modifier = contentModifier)
-                } else {
-                    CreditsScreen(
-                        versionName = versionName,
-                        onOpenSettings = { showSettings = true },
-                        modifier = contentModifier,
-                    )
-                }
+                creditsPage == CREDITS_DESIGN -> ComponentGallery(modifier = contentModifier)
+                else -> CreditsScreen(
+                    versionName = versionName,
+                    onOpenSettings = { creditsPage = CREDITS_SETTINGS },
+                    onOpenDesignSystem = { creditsPage = CREDITS_DESIGN },
+                    modifier = contentModifier,
+                )
+            }
             else -> DetectTab(
                 step = state.step,
                 recordingProgress = recordingProgress,
@@ -159,6 +168,9 @@ fun BuzzSenseApp(
         )
     }
 }
+
+private const val CREDITS_SETTINGS = "settings"
+private const val CREDITS_DESIGN = "design"
 
 /** The Detect tab: one screen per [DetectStep]. */
 @Composable

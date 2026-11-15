@@ -32,7 +32,7 @@ If Gradle dies with "paging file is too small", the machine is out of commit mem
 - Provider errors go through `FailureClassifier`; a failed validation calls `rejectLastAnswer()` so the retry uses the next tier. All tiers failing ends in `FallbackChecklist`, never an exception to the UI.
 
 ## UI and design system (strict)
-Every UI you create or change in `:app` must use the BuzzSense design system. Sources of truth: `DESIGN.md` and the Stitch project "Remix of BuzzSense Mosquito Detector" (id 9130902123267424033; the 13 screens the app ships). Code: tokens in `ui/theme/`, components in `ui/components/`, browsable in `ui/gallery/ComponentGallery.kt` (the "Components" tab of `MainActivity`).
+Every UI you create or change in `:app` must use the BuzzSense design system. Sources of truth: `DESIGN.md` and the Stitch project "Remix of BuzzSense Mosquito Detector" (id 9130902123267424033; the 13 screens the app ships). Code: tokens in `ui/theme/`, components in `ui/components/`, browsable in `ui/gallery/ComponentGallery.kt` (in the app: Credits → Design system).
 - Read theme values only through `BuzzTheme.*` (`colorScheme`, `typography`, `shapes`, `spacing`, `colors`, `data`). Outside `ui/theme/`, never write `Color(0x…)`, raw `dp`/`sp` for spacing or type, or a `FontFamily`.
 - Build screens only from `Buzz*` components. Do not use raw Material 3 `Button`, `Card`, `TopAppBar`, `NavigationBar`, `Checkbox`, `Switch`, `TextField`, `ModalBottomSheet` or `AlertDialog` in screens; their `Buzz*` wrappers exist.
 - If a pattern is missing, first add a `Buzz*` component in `ui/components/` (stateless, `modifier: Modifier = Modifier` as the first optional parameter, slots for content), then use it in the screen. Do not style one-off composables inside a screen.

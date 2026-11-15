@@ -120,8 +120,9 @@ fun LearnScreen(onOpenUrl: (String) -> Unit, modifier: Modifier = Modifier) {
 }
 
 /**
- * Stitch "51 Credits": data, guidance, tools and team, plus a Settings card (RAG switch and
- * the Gemini key, which must stay reachable) that the design does not show.
+ * Stitch "51 Credits": data, guidance, tools and team, plus two cards the design does not
+ * show: Settings (RAG switch and the Gemini key, which must stay reachable) and the Design
+ * system gallery of every token and Buzz* component.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -129,6 +130,7 @@ fun CreditsScreen(
     versionName: String,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenDesignSystem: () -> Unit = {},
 ) {
     BuzzScreenColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.md)) {
         Row(verticalAlignment = Alignment.Top) {
@@ -184,6 +186,14 @@ fun CreditsScreen(
             icon = BuzzIcons.Settings,
             body = stringResource(R.string.credits_settings_body),
             onClick = onOpenSettings,
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { BuzzChevron() }
+        }
+        BuzzInfoCard(
+            title = stringResource(R.string.credits_design_title),
+            icon = BuzzIcons.AutoAwesome,
+            body = stringResource(R.string.credits_design_body),
+            onClick = onOpenDesignSystem,
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { BuzzChevron() }
         }
