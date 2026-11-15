@@ -11,6 +11,12 @@ import com.buzzsense.veritas.shared.llm.FailureKind
 import com.buzzsense.veritas.shared.model.AlertAction
 import com.buzzsense.veritas.shared.model.AlertDraft
 import com.buzzsense.veritas.shared.model.Urgency
+import com.buzzsense.veritas.shared.agent.AlertPrompt
+import com.buzzsense.veritas.shared.model.DetectionResult
+import com.buzzsense.veritas.shared.model.Language
+import com.buzzsense.veritas.shared.model.MosquitoGroup
+import com.buzzsense.veritas.shared.model.Verdict
+import com.buzzsense.veritas.shared.rag.GuidanceQueryBuilder
 import com.buzzsense.veritas.shared.rag.GuidanceStore
 import com.buzzsense.veritas.shared.rag.HybridRetriever
 import com.buzzsense.veritas.shared.rag.RankedHit
@@ -127,6 +133,36 @@ class GuardrailsAndRetrievalTest {
         val vector = listOf(RankedHit("c", 1), RankedHit("b", 2), RankedHit("d", 3))
         // c: 1/63 + 1/61 = 0.03227 edges out b: 2/62 = 0.03226; both beat single-list hits.
         assertEquals(listOf("c", "b", "a", "d"),HybridRetriever.reciprocalRankFusion(listOf(keyword, vector), k = 60))
+    }
+
+    private fun heard(aedes: Verdict, culex: Float, other: Float) = DetectionResult(
+        mosquito = Verdict.YES, aedesAegypti = aedes, mosquitoScore = 0.9f, aedesScore = 0.2f, dominantFrequencyHz = 450f,
+        baselineAedes = Verdict.NO, windowCount = 8, mosquitoWindowCount = 8,
+        classVotes = mapOf("aedes" to 0.1f, "culex" to culex, "other_mosquito" to other, "none" to 0f),
+    )
+
+    @Test
+    fun culexGetsNightBiteGuidanceWithoutMalaria() {
+        val culex = heard(Verdict.NO, culex = 0.6f, other = 0.3f)
+        assertEquals(MosquitoGroup.CULEX, culex.group)
+        for (lang in Language.entries) {
+            val q = GuidanceQueryBuilder.build(culex, null, null, lang)
+            assertTrue("Culex" in q, q)
+            assertFalse("malaria" in q, "Culex is not a malaria vector: $q")
+        }
+        val prompt = AlertPrompt.user(culex, null, null, CHUNKS, UntrustedFence("doc-x"))
+        assertTrue("mosquito group: Culex" in prompt, prompt)
+    }
+
+    @Test
+    fun anophelesOrOtherKeepsMalariaGuidanceAndAedesCoversBothSpecies() {
+        val other = heard(Verdict.NO, culex = 0.1f, other = 0.8f)
+        assertEquals(MosquitoGroup.ANOPHELES_OR_OTHER, other.group)
+        assertTrue("malaria" in GuidanceQueryBuilder.build(other, null, null, Language.EN))
+        val aedes = heard(Verdict.YES, culex = 0.6f, other = 0.3f)   // the Aedes verdict wins over the votes
+        assertEquals(MosquitoGroup.AEDES, aedes.group)
+        assertTrue("albopictus" in AlertPrompt.user(aedes, null, null, CHUNKS, UntrustedFence("doc-x")))
+        assertTrue("albopictus" in AlertPrompt.system(Language.EN, UntrustedFence("doc-x"), CanaryToken()))
     }
 
     @Test

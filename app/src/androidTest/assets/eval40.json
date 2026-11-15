@@ -1,0 +1,246 @@
+{
+ "samples_per_recording": 39680,
+ "sample_rate": 8000,
+ "recordings": [
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_219565",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes albopictus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles minimus",
+   "site": "D3",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_222707",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex pipiens",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes albopictus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_219465",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D3",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_219897",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles dirus",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D3",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles gambiae",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes aegypti",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D3",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_201192",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_219048",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes albopictus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_3462",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_219636",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_220006",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex pipiens",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex pipiens",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex pipiens",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "aedes",
+   "species": "Aedes albopictus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "none",
+   "species": "background",
+   "site": "HumBugDB HB_218821",
+   "source": "HumBugDB train, windows not in the store"
+  },
+  {
+   "truth": "culex",
+   "species": "Culex quinquefasciatus",
+   "site": "D5",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D3",
+   "source": "BioDCASE validation"
+  },
+  {
+   "truth": "other_mosquito",
+   "species": "Anopheles stephensi",
+   "site": "D1",
+   "source": "BioDCASE validation"
+  }
+ ]
+}

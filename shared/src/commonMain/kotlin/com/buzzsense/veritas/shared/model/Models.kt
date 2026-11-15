@@ -30,7 +30,22 @@ data class DetectionResult(
     val mosquitoWindowCount: Int,
     /** Mean kNN vote share per class3 label over all windows, for "How it decided". */
     val classVotes: Map<String, Float> = emptyMap(),
-)
+) {
+    /**
+     * Which advice fits: the Aedes verdict first, then, for a mosquito that is not Aedes, the kNN
+     * votes decide between Culex (night biter, no malaria) and Anopheles/other (possible malaria).
+     * "Aedes" covers Aedes aegypti and Aedes albopictus: the store's class3 label does not split them.
+     */
+    val group: MosquitoGroup
+        get() = when {
+            aedesAegypti == Verdict.YES -> MosquitoGroup.AEDES
+            (classVotes["culex"] ?: 0f) > (classVotes["other_mosquito"] ?: 0f) -> MosquitoGroup.CULEX
+            else -> MosquitoGroup.ANOPHELES_OR_OTHER
+        }
+}
+
+/** Mosquito group used for the guidance query and the prompt (see [DetectionResult.group]). */
+enum class MosquitoGroup { AEDES, CULEX, ANOPHELES_OR_OTHER }
 
 @Serializable
 data class Weather(

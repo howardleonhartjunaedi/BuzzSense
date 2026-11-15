@@ -3,8 +3,8 @@ package com.buzzsense.veritas.shared.rag
 import com.buzzsense.veritas.shared.model.DetectionResult
 import com.buzzsense.veritas.shared.model.GuidanceChunk
 import com.buzzsense.veritas.shared.model.Language
+import com.buzzsense.veritas.shared.model.MosquitoGroup
 import com.buzzsense.veritas.shared.model.RiskLevel
-import com.buzzsense.veritas.shared.model.Verdict
 import com.buzzsense.veritas.shared.model.Weather
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -61,15 +61,19 @@ object GuidanceQueryBuilder {
     fun build(detection: DetectionResult, weather: Weather?, risk: RiskLevel?, language: Language): String {
         val es = language == Language.ES
         val parts = mutableListOf<String>()
-        parts += if (detection.aedesAegypti == Verdict.YES) {
-            if (es) "Aedes aegypti mosquito dentro de la casa dengue prevención" else "Aedes aegypti mosquito indoors dengue prevention"
-        } else {
-            if (es) "mosquito dentro de la casa prevención picaduras" else "mosquito indoors prevent bites"
-        }
-        // Not Aedes: it may be a night-biting Anopheles (malaria) mosquito, so ask for nets and fever testing too.
-        if (detection.aedesAegypti != Verdict.YES) {
-            parts += if (es) "malaria Anopheles dormir bajo mosquitero tratado de noche prueba de malaria si hay fiebre"
-            else "malaria Anopheles sleep under treated bed net at night malaria test for fever"
+        when (detection.group) {
+            MosquitoGroup.AEDES ->
+                parts += if (es) "Aedes aegypti mosquito dentro de la casa dengue prevención" else "Aedes aegypti mosquito indoors dengue prevention"
+            // Culex bites at night but does not carry malaria: nets and screens, no fever testing.
+            MosquitoGroup.CULEX ->
+                parts += if (es) "mosquito Culex dentro de la casa pica de noche dormir bajo mosquitero mallas en ventanas"
+                else "Culex mosquito indoors night biting sleep under bed net window screens"
+            // Possibly a night-biting Anopheles (malaria) mosquito: nets and fever testing too.
+            MosquitoGroup.ANOPHELES_OR_OTHER -> {
+                parts += if (es) "mosquito dentro de la casa prevención picaduras" else "mosquito indoors prevent bites"
+                parts += if (es) "malaria Anopheles dormir bajo mosquitero tratado de noche prueba de malaria si hay fiebre"
+                else "malaria Anopheles sleep under treated bed net at night malaria test for fever"
+            }
         }
         parts += if (es) "eliminar criaderos agua estancada recipientes mosquiteros repelente"
         else "eliminate breeding sites standing water containers screens repellent"

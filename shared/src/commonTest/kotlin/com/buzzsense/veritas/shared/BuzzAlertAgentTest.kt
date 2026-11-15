@@ -57,7 +57,9 @@ class BuzzAlertAgentTest {
         assertEquals(DISCLAIMER_EN, ready.alert.disclaimer)
         assertTrue(ready.alert.draft.actions.all { it.chunkId in ready.alert.citations })
         // Audio never reaches the model: only labels, weather and fenced guidance.
-        assertTrue(llm.prompts.single().toString().contains("likely Aedes aegypti: YES"))
+        val prompt = llm.prompts.single().toString()
+        assertTrue(prompt.contains("likely Aedes (aegypti or albopictus): YES"), prompt)
+        assertTrue(prompt.contains("mosquito group: Aedes"), prompt)
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.buzzsense.veritas.shared.model.Urgency
 import com.buzzsense.veritas.shared.model.DetectionResult
 import com.buzzsense.veritas.shared.model.GuidanceChunk
 import com.buzzsense.veritas.shared.model.Language
+import com.buzzsense.veritas.shared.model.MosquitoGroup
 import com.buzzsense.veritas.shared.model.RiskLevel
 import com.buzzsense.veritas.shared.model.Weather
 import kotlin.math.roundToInt
@@ -22,8 +23,10 @@ internal object AlertPrompt {
     fun system(language: Language, fence: UntrustedFence, canary: CanaryToken, withGuidance: Boolean = true): String = buildString {
         appendLine("You write short mosquito-bite prevention checklists (dengue and malaria) for a family who just heard a mosquito indoors.")
         appendLine("Rules:")
-        appendLine("- If the mosquito is likely Aedes aegypti, focus on dengue: day-time bites and water containers.")
-        appendLine("- If it is not Aedes aegypti, it may be a night-biting malaria mosquito: prefer nets at night, standing water and testing for fever" + if (withGuidance) ", when the documents support them." else ".")
+        appendLine("- The detection gives a mosquito group. Follow the advice for that group only:")
+        appendLine("  - Aedes: the dengue mosquito (Aedes aegypti or Aedes albopictus; the detector cannot tell the two apart, so say \"an Aedes mosquito\", not one species). Focus on day-time bites and water containers.")
+        appendLine("  - Culex: a night-biting mosquito that does not carry malaria. Focus on nets and screens at night, repellent and removing standing water. Do not mention malaria or malaria testing.")
+        appendLine("  - Anopheles or another mosquito: it may be a night-biting malaria mosquito. Prefer nets at night, standing water and testing for fever" + if (withGuidance) ", when the documents support them." else ".")
         appendLine("- Never say that anyone has or will get a disease; a buzz only shows a mosquito is present.")
         if (withGuidance) {
             appendLine("- Use ONLY the guidance documents provided. Every action must cite the id of the document it came from.")
@@ -47,7 +50,8 @@ internal object AlertPrompt {
     ): String = buildString {
         appendLine("Detection (on-device model):")
         appendLine("- mosquito heard: ${detection.mosquito} (score ${pct(detection.mosquitoScore)})")
-        appendLine("- likely Aedes aegypti: ${detection.aedesAegypti}${detection.aedesScore?.let { " (score ${pct(it)})" } ?: ""}")
+        appendLine("- likely Aedes (aegypti or albopictus): ${detection.aedesAegypti}${detection.aedesScore?.let { " (score ${pct(it)})" } ?: ""}")
+        appendLine("- mosquito group: ${groupName(detection.group)}")
         if (weather != null) {
             appendLine("Weather today in ${weather.city}: ${weather.temperatureC}°C, humidity ${weather.relativeHumidityPct}%, rain ${weather.precipitationMm} mm.")
         }
@@ -64,6 +68,12 @@ internal object AlertPrompt {
     }
 
     private fun pct(x: Float) = "${(x * 100).roundToInt()}%"
+
+    private fun groupName(g: MosquitoGroup) = when (g) {
+        MosquitoGroup.AEDES -> "Aedes"
+        MosquitoGroup.CULEX -> "Culex"
+        MosquitoGroup.ANOPHELES_OR_OTHER -> "Anopheles or another mosquito"
+    }
 
     /**
      * Structured output in Koog's Manual mode: the JSON schema and one example go into the

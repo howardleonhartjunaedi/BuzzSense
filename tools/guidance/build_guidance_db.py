@@ -118,14 +118,19 @@ class Progress:
 # Must produce exactly the strings of GuidanceQueryBuilder.build (HybridRetriever.kt).
 # GuidanceDbParityTest fails if the two drift apart.
 
-def build_query(aedes_yes: bool, rain: bool, hot: bool, high_risk: bool, es: bool) -> str:
+GROUPS = ("aedes", "culex", "anopheles_or_other")      # DetectionResult.group / MosquitoGroup
+
+
+def build_query(group: str, rain: bool, hot: bool, high_risk: bool, es: bool) -> str:
     parts = []
-    if aedes_yes:
+    if group == "aedes":
         parts.append("Aedes aegypti mosquito dentro de la casa dengue prevención" if es
                      else "Aedes aegypti mosquito indoors dengue prevention")
+    elif group == "culex":
+        parts.append("mosquito Culex dentro de la casa pica de noche dormir bajo mosquitero mallas en ventanas" if es
+                     else "Culex mosquito indoors night biting sleep under bed net window screens")
     else:
         parts.append("mosquito dentro de la casa prevención picaduras" if es else "mosquito indoors prevent bites")
-    if not aedes_yes:
         parts.append("malaria Anopheles dormir bajo mosquitero tratado de noche prueba de malaria si hay fiebre" if es
                      else "malaria Anopheles sleep under treated bed net at night malaria test for fever")
     parts.append("eliminar criaderos agua estancada recipientes mosquiteros repelente" if es
@@ -140,7 +145,7 @@ def build_query(aedes_yes: bool, rain: bool, hot: bool, high_risk: bool, es: boo
 
 
 def all_queries() -> list[str]:
-    return sorted({build_query(*flags) for flags in itertools.product([False, True], repeat=5)})
+    return sorted({build_query(g, *flags) for g in GROUPS for flags in itertools.product([False, True], repeat=4)})
 
 
 # --- Embedding ---------------------------------------------------------------------------

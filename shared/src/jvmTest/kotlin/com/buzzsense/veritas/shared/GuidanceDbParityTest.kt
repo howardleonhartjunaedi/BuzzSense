@@ -24,14 +24,20 @@ class GuidanceDbParityTest {
 
     private val dbFile = File("../app/src/main/assets/guidance.db")
 
-    /** Every query the agent can send: Aedes yes/no × rain × heat × high risk × language. */
+    /** Every query the agent can send: mosquito group (Aedes / Culex / Anopheles-other) × rain × heat × high risk × language. */
     private fun allQueries(): Set<String> {
         val out = mutableSetOf<String>()
-        for (aedes in listOf(Verdict.YES, Verdict.NO)) for (rain in listOf(0.0, 2.0)) for (temp in listOf(25.0, 31.0))
+        val groups = listOf(
+            Verdict.YES to emptyMap<String, Float>(),
+            Verdict.NO to mapOf("culex" to 0.6f, "other_mosquito" to 0.3f),
+            Verdict.NO to mapOf("culex" to 0.2f, "other_mosquito" to 0.7f),
+        )
+        for ((aedes, votes) in groups) for (rain in listOf(0.0, 2.0)) for (temp in listOf(25.0, 31.0))
             for (risk in listOf(null, RiskLevel.HIGH)) for (lang in Language.entries) {
                 val detection = DetectionResult(
                     mosquito = Verdict.YES, aedesAegypti = aedes, mosquitoScore = 0.9f, aedesScore = 0.8f,
                     dominantFrequencyHz = 600f, baselineAedes = Verdict.NO, windowCount = 4, mosquitoWindowCount = 4,
+                    classVotes = votes,
                 )
                 out += GuidanceQueryBuilder.build(detection, Weather("San Juan, PR", temp, 80.0, rain, "t"), risk, lang)
             }
@@ -43,7 +49,7 @@ class GuidanceDbParityTest {
         if (!dbFile.exists()) return@runTest
         GuidanceDb.open(dbFile.absolutePath, System.getenv("SQLITE_VEC_LIB")).use { store ->
             val queries = allQueries()
-            assertEquals(32, queries.size)
+            assertEquals(48, queries.size)
             val missing = queries.filter { store.precomputedQueryEmbedding(it) == null }
             assertTrue(missing.isEmpty(), "build_guidance_db.py and GuidanceQueryBuilder drifted; missing: $missing")
             assertEquals(384, assertNotNull(store.precomputedQueryEmbedding(queries.first())).size)
