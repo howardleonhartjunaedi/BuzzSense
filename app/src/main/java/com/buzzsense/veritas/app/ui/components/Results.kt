@@ -2,6 +2,7 @@ package com.buzzsense.veritas.app.ui.components
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +68,7 @@ fun BuzzResultHero(
     kind: ResultKind,
     confidence: Float?,
     modifier: Modifier = Modifier,
+    peakHz: Float? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.lg)) {
         BuzzIconChip(kind.icon, tone = kind.chipTone, size = 28.dp)
@@ -74,8 +76,37 @@ fun BuzzResultHero(
             Text(stringResource(kind.title), style = BuzzTheme.typography.displayMedium, color = BuzzTheme.colorScheme.primary)
             Text(stringResource(kind.body), style = BuzzTheme.typography.bodyMedium, color = BuzzTheme.colorScheme.outline)
         }
+        BuzzResultPanel(kind = kind, confidence = confidence, peakHz = peakHz)
+    }
+}
+
+/**
+ * Stitch result panel: a mist card with the species/peak row, the big two-tone confidence
+ * and its bar. Parts with no data are left out; the panel is skipped when nothing is known.
+ */
+@Composable
+fun BuzzResultPanel(
+    kind: ResultKind,
+    confidence: Float?,
+    modifier: Modifier = Modifier,
+    peakHz: Float? = null,
+) {
+    if (confidence == null && peakHz == null) return
+    BuzzCard(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.md)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BuzzStatusTag(stringResource(kind.title), tone = kind.statusTone, modifier = Modifier.weight(1f, fill = false))
+            Box(Modifier.weight(1f))
+            if (peakHz != null) {
+                BuzzMetricChip(
+                    label = stringResource(R.string.result_peak),
+                    value = "${peakHz.toInt()} Hz",
+                    tone = MetricTone.Neutral,
+                    modifier = Modifier.padding(start = BuzzTheme.spacing.sm),
+                )
+            }
+        }
         if (confidence != null) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = BuzzTheme.spacing.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm)) {
                 BuzzTwoToneText(
                     value = (confidence * 100).toInt().toString(),
                     unit = "%",
@@ -85,7 +116,7 @@ fun BuzzResultHero(
                     unitColor = BuzzTheme.colorScheme.outline,
                 )
                 BuzzEyebrow(stringResource(R.string.result_confidence))
-                BuzzConfidenceBar(progress = confidence, color = kind.accentColor)
+                BuzzConfidenceBar(progress = confidence, color = kind.accentColor, trackColor = BuzzTheme.colorScheme.surfaceContainerHighest)
             }
         }
     }
@@ -126,7 +157,15 @@ fun BuzzResultCard(
 @Composable
 private fun BuzzResultHeroPreview() {
     BuzzPreviewContainer {
-        BuzzResultHero(kind = ResultKind.LikelyAedes, confidence = 0.82f)
+        BuzzResultHero(kind = ResultKind.LikelyAedes, confidence = 0.82f, peakHz = 584f)
+    }
+}
+
+@BuzzPreviews
+@Composable
+private fun BuzzResultHeroNoConfidencePreview() {
+    BuzzPreviewContainer {
+        BuzzResultHero(kind = ResultKind.NotDengue, confidence = null, peakHz = 448f)
     }
 }
 

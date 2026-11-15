@@ -19,6 +19,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.buzzsense.veritas.shared.audio.AudioClip
+import com.buzzsense.veritas.shared.guardrails.SpeechGate
+import com.buzzsense.veritas.shared.guardrails.SpeechScore
+import com.buzzsense.veritas.shared.guardrails.VoiceActivityDetector
+import kotlinx.coroutines.test.runTest
 
 class GuardrailsAndRetrievalTest {
 
@@ -62,6 +67,37 @@ class GuardrailsAndRetrievalTest {
         val test = draft("Get a malaria blood test at the clinic today if anyone has a fever" to "cdc-en-1",
             "Use repellent" to "cdc-en-2", "Close screens" to "who-en-1")
         assertTrue(validator.validate(test, CHUNKS, canary).isEmpty())
+    }
+
+    private class FixedVad(private val score: SpeechScore) : VoiceActivityDetector {
+        override suspend fun analyze(samples: FloatArray, sampleRateHz: Int) = score
+    }
+
+    @Test
+    fun aShortSpeechLikePeakFromABuzzDoesNotDeleteTheClip() = runTest {
+        // Real Culex clips peak above 0.9 on a few chunks but stay under ~18% speech-like.
+        val clip = AudioClip(FloatArray(8_000), 8_000)
+        val check = SpeechGate(FixedVad(SpeechScore(0.99f, 0.16f, 640))).check(clip)
+        assertFalse(check.rejected)
+        assertFalse(clip.isWiped)
+    }
+
+    @Test
+    fun sustainedSpeechDeletesTheClip() = runTest {
+        val clip = AudioClip(FloatArray(8_000), 8_000)
+        val check = SpeechGate(FixedVad(SpeechScore(1f, 0.44f, 2_080))).check(clip)
+        assertTrue(check.rejected)
+        assertTrue(clip.isWiped, "a rejected clip is wiped at once")
+        assertTrue(check.score.describe().startsWith("44% of the clip speech-like"))
+    }
+
+    @Test
+    fun bareModeSkipsOnlyTheCitationCheck() {
+        val uncited = draft("Empty containers" to "", "Use repellent" to "", "Close screens" to "")
+        assertTrue(validator.validate(uncited, emptyList(), canary, requireCitations = false).isEmpty())
+        assertTrue(validator.validate(uncited, emptyList(), canary).any { it is ValidationIssue.UnknownCitation })
+        val medicine = draft("Give paracetamol" to "", "Use repellent" to "", "Close screens" to "")
+        assertTrue(validator.validate(medicine, emptyList(), canary, requireCitations = false).any { it is ValidationIssue.Medicine })
     }
 
     @Test

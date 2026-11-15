@@ -54,11 +54,11 @@ class BundledAssetsTest {
         if (!ready()) return@runTest
         SileroVad(File(assets, "silero_vad.onnx").readBytes()).use { vad ->
             for ((label, samples) in cases()) {
-                val p = vad.speechProbability(samples, 8_000)
-                println("silero speech probability for $label: $p")
-                assertTrue(p < 0.5f, "$label clip would be deleted as speech (p=$p)")
+                val score = vad.analyze(samples, 8_000)
+                println("silero for $label: ${score.describe()}")
+                assertTrue(score.speechFraction < 0.25f, "$label clip would be deleted as speech (${score.describe()})")
             }
-            assertTrue(vad.speechProbability(FloatArray(16_000), 8_000) < 0.5f, "silence flagged as speech")
+            assertTrue(vad.analyze(FloatArray(16_000), 8_000).speechFraction < 0.25f, "silence flagged as speech")
         }
     }
 

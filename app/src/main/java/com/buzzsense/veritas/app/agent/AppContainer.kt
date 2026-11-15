@@ -33,6 +33,8 @@ class AppContainer(
 
     val keyStore: KeystoreApiKeyStore by lazy { KeystoreApiKeyStore(app) }
 
+    val settings: AppSettings by lazy { AppSettings(app) }
+
     fun newRecorder(): ClipRecorder = ClipRecorder(app)
 
     /** @throws EngineUnavailableException when required assets or libvec0.so are missing. */

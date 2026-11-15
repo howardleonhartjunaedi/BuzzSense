@@ -1,6 +1,11 @@
 package com.buzzsense.veritas.app.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
@@ -41,7 +47,19 @@ import com.buzzsense.veritas.app.R
 import com.buzzsense.veritas.app.ui.theme.BuzzIcons
 import com.buzzsense.veritas.app.ui.theme.BuzzTheme
 
-/** "graphic_eq + BuzzSense" wordmark used in the Stitch TopAppBar. */
+/** The BuzzSense logo tile (black mosquito on a white rounded square) from Stitch. */
+@Composable
+fun BuzzLogo(size: Dp, modifier: Modifier = Modifier) {
+    Image(
+        painter = painterResource(R.drawable.brand_logo),
+        contentDescription = null,
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(size * 0.2f)),
+    )
+}
+
+/** Logo + "BuzzSense" wordmark used in the Stitch TopAppBar. */
 @Composable
 fun BuzzBrandMark(modifier: Modifier = Modifier) {
     Row(
@@ -49,7 +67,7 @@ fun BuzzBrandMark(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm),
     ) {
-        Icon(BuzzIcons.GraphicEq, contentDescription = null, tint = BuzzTheme.colorScheme.primary)
+        BuzzLogo(size = 24.dp)
         Text(
             text = stringResource(R.string.brand_name),
             style = BuzzTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
@@ -87,9 +105,34 @@ fun BuzzTopAppBar(
     }
 }
 
-/** Back affordance: grey disc + chevron, per the style guide. */
+/**
+ * Back affordance: grey disc + arrow, per the style guide. With [label] it becomes the
+ * "( ← ) Back" text action used on linear screens such as Mic Permission.
+ */
 @Composable
-fun BuzzBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun BuzzBackButton(onClick: () -> Unit, modifier: Modifier = Modifier, label: String? = null) {
+    if (label != null) {
+        val interactionSource = remember { MutableInteractionSource() }
+        Row(
+            modifier = modifier
+                .heightIn(min = 48.dp)
+                .pressAlpha(interactionSource)
+                .clickable(interactionSource, indication = null, role = Role.Button, onClick = onClick),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(BuzzTheme.colorScheme.surfaceContainerLow, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(BuzzIcons.ArrowBack, contentDescription = null, tint = BuzzTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+            }
+            Text(label, style = BuzzTheme.typography.bodyMedium, color = BuzzTheme.colorScheme.outline)
+        }
+        return
+    }
     IconButton(onClick = onClick, modifier = modifier) {
         Box(
             modifier = Modifier
@@ -191,19 +234,24 @@ private fun BuzzNavBarItem(item: BuzzNavItem, selected: Boolean, onClick: () -> 
     }
 }
 
-/** The app's four tabs from the Stitch screens. */
+/** Keys of the app's three tabs (Stitch "3 Tabs" screens). */
+object BuzzTabs {
+    const val DETECT = "detect"
+    const val LEARN = "learn"
+    const val CREDITS = "credits"
+}
+
+/** The app's three tabs from the Stitch screens: Detect, Learn, Credits. */
 @Composable
 fun rememberBuzzNavItems(): List<BuzzNavItem> {
     val detect = stringResource(R.string.nav_detect)
     val learn = stringResource(R.string.nav_learn)
-    val map = stringResource(R.string.nav_map)
-    val about = stringResource(R.string.nav_about)
-    return remember(detect, learn, map, about) {
+    val credits = stringResource(R.string.nav_credits)
+    return remember(detect, learn, credits) {
         listOf(
-            BuzzNavItem("detect", detect, BuzzIcons.GraphicEq),
-            BuzzNavItem("learn", learn, BuzzIcons.MenuBook),
-            BuzzNavItem("map", map, BuzzIcons.NearMe),
-            BuzzNavItem("about", about, BuzzIcons.Info),
+            BuzzNavItem(BuzzTabs.DETECT, detect, BuzzIcons.GraphicEq),
+            BuzzNavItem(BuzzTabs.LEARN, learn, BuzzIcons.MenuBook),
+            BuzzNavItem(BuzzTabs.CREDITS, credits, BuzzIcons.Info),
         )
     }
 }
@@ -221,6 +269,7 @@ private fun BuzzTopAppBarPreview() {
                 title = { Text("Result details", style = BuzzTheme.typography.titleLarge) },
                 actions = { BuzzTextButton(text = "Skip", onClick = {}) },
             )
+            BuzzBackButton(onClick = {}, label = "Back", modifier = Modifier.padding(start = 20.dp))
         }
     }
 }

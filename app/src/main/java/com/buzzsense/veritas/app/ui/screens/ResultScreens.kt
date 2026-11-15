@@ -8,7 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import com.buzzsense.veritas.app.ui.components.BuzzIconChip
+import com.buzzsense.veritas.app.ui.components.BuzzListRow
+import com.buzzsense.veritas.app.ui.components.IconChipTone
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +38,7 @@ import com.buzzsense.veritas.app.ui.components.BuzzModalBottomSheet
 import com.buzzsense.veritas.app.ui.components.BuzzPreviewContainer
 import com.buzzsense.veritas.app.ui.components.BuzzPreviews
 import com.buzzsense.veritas.app.ui.components.BuzzResultHero
+import com.buzzsense.veritas.app.ui.components.BuzzScreenColumn
 import com.buzzsense.veritas.app.ui.components.BuzzScreenPreviews
 import com.buzzsense.veritas.app.ui.components.BuzzSheetContent
 import com.buzzsense.veritas.app.ui.components.BuzzTextButton
@@ -50,22 +60,26 @@ fun ResultScreen(
     onRecordAgain: () -> Unit,
     modifier: Modifier = Modifier,
     showWhatToDo: Boolean = kind == ResultKind.LikelyAedes,
+    peakHz: Float? = null,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = BuzzTheme.spacing.margin, vertical = BuzzTheme.spacing.md),
+    BuzzScreenColumn(
+        modifier = modifier,
     ) {
         BuzzEyebrow(stringResource(R.string.result_eyebrow))
-        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-            BuzzResultHero(kind = kind, confidence = confidence)
-        }
+        Spacer(Modifier.height(48.dp))
+        BuzzResultHero(kind = kind, confidence = confidence, peakHz = peakHz)
+        Spacer(Modifier.weight(1f).heightIn(min = BuzzTheme.spacing.xl))
         Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm)) {
             if (showWhatToDo) {
                 BuzzButton(text = stringResource(R.string.result_what_to_do), onClick = onWhatToDo, modifier = Modifier.fillMaxWidth())
                 BuzzTextButton(text = stringResource(R.string.result_record_again), onClick = onRecordAgain, modifier = Modifier.fillMaxWidth())
             } else {
-                BuzzButton(text = stringResource(R.string.result_record_again), onClick = onRecordAgain, modifier = Modifier.fillMaxWidth())
+                BuzzButton(
+                    text = stringResource(R.string.result_record_again),
+                    onClick = onRecordAgain,
+                    leadingIcon = BuzzIcons.GraphicEq,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
             BuzzDisclaimer()
         }
@@ -85,8 +99,6 @@ data class ChecklistEntry(
 @Composable
 fun WhatToDoNowContent(
     entries: List<ChecklistEntry>,
-    checkedIds: Set<String>,
-    onToggle: (String, Boolean) -> Unit,
     onOpenOfficialInfo: (() -> Unit)?,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
@@ -106,12 +118,10 @@ fun WhatToDoNowContent(
             verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm),
         ) {
             entries.forEach { entry ->
-                BuzzChecklistItem(
-                    text = entry.text,
-                    icon = entry.icon,
+                BuzzListRow(
+                    headline = entry.text,
                     supporting = entry.source,
-                    checked = entry.id in checkedIds,
-                    onCheckedChange = { onToggle(entry.id, it) },
+                    leading = { BuzzIconChip(entry.icon, tone = IconChipTone.Neutral, size = 28.dp) },
                 )
             }
         }
@@ -121,7 +131,7 @@ fun WhatToDoNowContent(
     }
 }
 
-/** Modal sheet wrapper; owns only the checked-state of the rows. */
+/** Modal sheet wrapper (Stitch 11). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhatToDoNowSheet(
@@ -130,12 +140,9 @@ fun WhatToDoNowSheet(
     onOpenOfficialInfo: (() -> Unit)?,
     subtitle: String = stringResource(R.string.todo_subtitle),
 ) {
-    var checked by remember(entries) { mutableStateOf(emptySet<String>()) }
     BuzzModalBottomSheet(onDismissRequest = onDismiss) {
         WhatToDoNowContent(
             entries = entries,
-            checkedIds = checked,
-            onToggle = { id, on -> checked = if (on) checked + id else checked - id },
             onOpenOfficialInfo = onOpenOfficialInfo,
             onDone = onDismiss,
             subtitle = subtitle,
@@ -153,7 +160,13 @@ internal val SampleChecklist = listOf(
 @BuzzScreenPreviews
 @Composable
 private fun ResultAedesPreview() {
-    BuzzPreviewContainer { ResultScreen(ResultKind.LikelyAedes, 0.82f, onWhatToDo = {}, onRecordAgain = {}) }
+    BuzzPreviewContainer { ResultScreen(ResultKind.LikelyAedes, 0.82f, onWhatToDo = {}, onRecordAgain = {}, peakHz = 584f) }
+}
+
+@BuzzScreenPreviews
+@Composable
+private fun ResultNotDenguePreview() {
+    BuzzPreviewContainer { ResultScreen(ResultKind.NotDengue, null, onWhatToDo = {}, onRecordAgain = {}, peakHz = 448f) }
 }
 
 @BuzzScreenPreviews
@@ -174,8 +187,6 @@ private fun WhatToDoNowContentPreview() {
     BuzzPreviewContainer {
         WhatToDoNowContent(
             entries = SampleChecklist,
-            checkedIds = setOf("drain"),
-            onToggle = { _, _ -> },
             onOpenOfficialInfo = {},
             onDone = {},
         )

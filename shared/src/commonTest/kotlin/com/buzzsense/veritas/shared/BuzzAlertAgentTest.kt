@@ -18,6 +18,7 @@ import com.buzzsense.veritas.shared.rag.GuidanceRetriever
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration
@@ -106,6 +107,25 @@ class BuzzAlertAgentTest {
         val sent = gemma.prompts.single()
         assertEquals(null, sent.params.schema, "LiteRT ignores params.schema; the format must be in the messages")
         assertTrue(sent.toString().contains("chunk_id"), "format instructions missing from the on-device prompt")
+    }
+
+    @Test
+    fun bareModeSkipsRetrievalAndAcceptsUncitedActions() = runTest {
+        val llm = ScriptedExecutor({ goodDraftJson(listOf("", "", "")) })
+        val bare = BuzzAlertEngine(
+            detector = WingbeatDetector(AcousticFeatures(TEST_SPEC), FixedClassifier(0.9f, 0.8f), DominantFrequencyBaseline(425f..809f)),
+            weather = FixedWeather,
+            retriever = GuidanceRetriever { error("retrieval must not run when guidance is off") },
+            chunkLookup = { emptyList() },
+            providers = ProviderChain(listOf(ProviderTier(ProviderTierId.GEMINI, llm, model)), policy = FailoverPolicy(retryBaseDelay = Duration.ZERO)),
+        )
+        val ready = assertIs<AgentOutcome.AlertReady>(bare.run(clip(), Language.EN, useGuidance = false))
+        assertEquals(ProviderTierId.GEMINI, ready.trace.provider)
+        assertTrue(ready.alert.citations.isEmpty())
+        assertTrue(ready.trace.events.any { it.stage == "retrieve" && it.message.startsWith("skipped") })
+        val sent = llm.prompts.single().toString()
+        assertFalse(sent.contains("Guidance documents:"), "no documents are sent in bare mode")
+        assertEquals(DISCLAIMER_EN, ready.alert.disclaimer)
     }
 
     @Test

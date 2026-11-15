@@ -68,6 +68,8 @@ internal class RunDeps(
     val lookupChunks: suspend (List<String>) -> List<GuidanceChunk>,
     val events: MutableList<TraceEvent>,
     val maxComposeAttempts: Int = 2,
+    /** false = bare LLM: skip retrieval, no citations required (user toggle, eval 8 baseline). */
+    val useGuidance: Boolean = true,
 )
 
 /**
@@ -106,9 +108,12 @@ internal fun buzzAlertStrategy(deps: RunDeps): AIAgentGraphStrategy<AlertRequest
         val detect by node<AlertRequest, DetectStep>(NODE_DETECT) { req ->
             language = req.language
             try {
-                if (deps.speechGate?.rejectIfSpeech(req.clip) == true) {
-                    deps.events += TraceEvent("speech-rejection", "voice detected; clip deleted")
-                    return@node DetectStep.SpeechRejected
+                deps.speechGate?.check(req.clip)?.let { check ->
+                    if (check.rejected) {
+                        deps.events += TraceEvent("speech-rejection", "voice detected (${check.score.describe()}); clip deleted")
+                        return@node DetectStep.SpeechRejected
+                    }
+                    deps.events += TraceEvent("speech-check", "passed (${check.score.describe()})")
                 }
                 deps.tools.clipHolder.clip = req.clip
                 val result = deps.gate.call(NODE_DETECT, deps.tools.detect, NoArgs)
@@ -137,6 +142,10 @@ internal fun buzzAlertStrategy(deps: RunDeps): AIAgentGraphStrategy<AlertRequest
 
         // 3. Retrieve: query built from detection + weather only, never from free text.
         val retrieve by node<ContextBundle, ComposeInput>(NODE_RETRIEVE) { ctx ->
+            if (!deps.useGuidance) {
+                deps.events += TraceEvent("retrieve", "skipped: cited guidance (RAG) is turned off")
+                return@node ComposeInput(ctx, emptyList())
+            }
             val query = GuidanceQueryBuilder.build(ctx.detection, ctx.weather, ctx.risk, language)
             val chunks = deps.gate.call(NODE_RETRIEVE, deps.tools.searchGuidance, GuidanceQuery(query)).chunks
             deps.events += TraceEvent("retrieve", "${chunks.size} chunks for query \"$query\"")
@@ -146,13 +155,13 @@ internal fun buzzAlertStrategy(deps: RunDeps): AIAgentGraphStrategy<AlertRequest
         // 4. Compose: the only LLM call. Structured output, no tools, fenced documents.
         val compose by node<ComposeInput, ComposeResult>(NODE_COMPOSE) { input ->
             attempts++
-            if (deps.executor == null || input.chunks.isEmpty()) return@node ComposeResult.NoProvider(input)
+            if (deps.executor == null || (deps.useGuidance && input.chunks.isEmpty())) return@node ComposeResult.NoProvider(input)
             try {
                 val response = llm.writeSession {
                     tools = emptyList()
                     rewritePrompt { old ->
                         prompt(old.id, old.params) {
-                            system(AlertPrompt.system(language, fence, canary))
+                            system(AlertPrompt.system(language, fence, canary, withGuidance = deps.useGuidance))
                             user(AlertPrompt.user(input.context.detection, input.context.weather, input.context.risk, input.chunks, fence))
                         }
                     }
@@ -175,7 +184,7 @@ internal fun buzzAlertStrategy(deps: RunDeps): AIAgentGraphStrategy<AlertRequest
                 is ComposeResult.NoProvider -> Checked.Fallback(result.input, "no LLM provider available")
                 is ComposeResult.ParseFailed -> retryOrFallback(result.input, result.reason, attempts, deps)
                 is ComposeResult.Draft -> {
-                    val issues = deps.validator.validate(result.draft, result.input.chunks, canary)
+                    val issues = deps.validator.validate(result.draft, result.input.chunks, canary, requireCitations = deps.useGuidance)
                     if (issues.isEmpty()) Checked.Valid(result.input, result.draft)
                     else retryOrFallback(result.input, issues.joinToString("; ") { it.reason }, attempts, deps)
                 }

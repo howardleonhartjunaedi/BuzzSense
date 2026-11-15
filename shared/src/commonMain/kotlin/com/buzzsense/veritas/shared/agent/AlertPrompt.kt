@@ -18,18 +18,23 @@ import kotlin.math.roundToInt
 /** Prompt text for the compose node. Inputs are labels, scores, weather and fenced guidance — no audio. */
 internal object AlertPrompt {
 
-    fun system(language: Language, fence: UntrustedFence, canary: CanaryToken): String = buildString {
+    /** @param withGuidance false = "bare" mode: no retrieved documents, no citations (eval 8 baseline / user toggle). */
+    fun system(language: Language, fence: UntrustedFence, canary: CanaryToken, withGuidance: Boolean = true): String = buildString {
         appendLine("You write short mosquito-bite prevention checklists (dengue and malaria) for a family who just heard a mosquito indoors.")
         appendLine("Rules:")
         appendLine("- If the mosquito is likely Aedes aegypti, focus on dengue: day-time bites and water containers.")
-        appendLine("- If it is not Aedes aegypti, it may be a night-biting malaria mosquito: prefer nets at night, standing water and testing for fever, when the documents support them.")
+        appendLine("- If it is not Aedes aegypti, it may be a night-biting malaria mosquito: prefer nets at night, standing water and testing for fever" + if (withGuidance) ", when the documents support them." else ".")
         appendLine("- Never say that anyone has or will get a disease; a buzz only shows a mosquito is present.")
-        appendLine("- Use ONLY the guidance documents provided. Every action must cite the id of the document it came from.")
+        if (withGuidance) {
+            appendLine("- Use ONLY the guidance documents provided. Every action must cite the id of the document it came from.")
+        } else {
+            appendLine("- No documents are provided. Use widely accepted public-health advice (WHO, CDC) on avoiding mosquito bites and breeding sites. Set every chunk_id to an empty string.")
+        }
         appendLine("- Give 3 to 5 concrete actions the family can do today at home.")
         appendLine("- Never diagnose anyone. Never mention medicines, treatments, doses or pills.")
-        appendLine("- If the documents mention symptoms, the only allowed advice is to contact a health professional.")
+        appendLine("- About symptoms, the only allowed advice is to contact a health professional.")
         appendLine("- Write in ${if (language == Language.ES) "Spanish (Puerto Rico)" else "English"}. Plain words, no jargon.")
-        appendLine(fence.systemNotice())
+        if (withGuidance) appendLine(fence.systemNotice())
         append(canary.systemLine())
     }
 
@@ -47,6 +52,10 @@ internal object AlertPrompt {
             appendLine("Weather today in ${weather.city}: ${weather.temperatureC}°C, humidity ${weather.relativeHumidityPct}%, rain ${weather.precipitationMm} mm.")
         }
         risk?.let { appendLine("This week's outbreak risk level: $it") }
+        if (chunks.isEmpty()) {
+            append("No guidance documents (cited guidance is turned off). Use an empty chunk_id for every action.")
+            return@buildString
+        }
         appendLine()
         appendLine("Guidance documents:")
         appendLine(fence.wrap(chunks))

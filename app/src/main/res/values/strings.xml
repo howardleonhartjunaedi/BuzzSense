@@ -8,8 +8,7 @@
     <!-- Navigation -->
     <string name="nav_detect">Detect</string>
     <string name="nav_learn">Learn</string>
-    <string name="nav_map">Map</string>
-    <string name="nav_about">About</string>
+    <string name="nav_credits">Credits</string>
     <string name="action_history">History</string>
     <string name="action_back">Back</string>
     <string name="action_skip">Skip</string>
@@ -39,7 +38,7 @@
     <string name="result_aedes_title">Likely Aedes aegypti</string>
     <string name="result_aedes_body">The mosquito that spreads dengue.</string>
     <string name="result_not_dengue_title">Likely not a dengue mosquito</string>
-    <string name="result_not_dengue_body">The buzz sounds like a different mosquito.</string>
+    <string name="result_not_dengue_body">The buzz did not match our dengue mosquito recordings. This check is not certain, so keep up dengue prevention.</string>
     <string name="result_not_sure_title">Not sure, try again</string>
     <string name="result_not_sure_body">The sound was faint or noisy. Record again, closer.</string>
     <string name="result_none_title">No mosquito heard</string>
@@ -47,6 +46,7 @@
     <string name="result_voice_title">Voices heard</string>
     <string name="result_voice_body">The recording was deleted. Record again with only the mosquito.</string>
     <string name="result_confidence">AI confidence</string>
+    <string name="result_peak">Peak</string>
     <string name="result_what_to_do">What to do now</string>
     <string name="result_record_again">Record again</string>
     <string name="result_details">How it decided</string>
@@ -64,9 +64,122 @@
     <string name="tips_highlight">fans</string>
     <string name="tips_got_it">Got it</string>
 
-    <!-- Tabs not built yet -->
-    <string name="tab_soon_title">Coming soon</string>
-    <string name="tab_soon_body">This tab is designed in Stitch and will be built next.</string>
+    <!-- Onboarding: walkthrough 1–3 and mic permission -->
+    <string name="onboarding_step">%1$d of %2$d</string>
+    <string name="action_next">Next</string>
+    <string name="action_get_started">Get started</string>
+    <string name="walk1_title">Every buzz is a fingerprint</string>
+    <string name="walk1_body">Each mosquito species beats its wings at its own pitch. BuzzSense listens for it.</string>
+    <string name="walk1_card_label">Wingbeat pitch</string>
+    <string name="walk1_card_note">Illustration. Real pitches overlap and vary with temperature.</string>
+    <string name="walk1_bar_culex">Culex</string>
+    <string name="walk1_bar_aedes">Aedes</string>
+    <string name="walk1_bar_anopheles">Anopheles</string>
+    <string name="walk2_title">Record 5 seconds</string>
+    <string name="walk2_body">A short, quiet clip is all the detector needs.</string>
+    <string name="walk2_row_distance">Hold your phone 5–10 cm away</string>
+    <string name="walk2_row_quiet">Turn off fans and noise</string>
+    <string name="walk2_row_still">Keep still for 5 seconds</string>
+    <string name="walk2_status">Audio stays on this phone</string>
+    <string name="walk3_title">A helper, not a doctor</string>
+    <string name="walk3_body">You get an AI estimate with a confidence %. If someone has a high fever, see a doctor.</string>
+    <string name="walk3_card_tag">Bio-acoustic assist</string>
+    <string name="walk3_card_text">Quick sound-based estimate for community prevention.</string>
+    <string name="walk3_role_label">Role</string>
+    <string name="walk3_role_value">Prevention helper</string>
+    <string name="walk3_output_label">Output</string>
+    <string name="walk3_output_value">Estimate + checklist</string>
+    <string name="mic_perm_title">Let BuzzSense listen</string>
+    <string name="mic_perm_body">We only use the mic while you record. Audio is not saved.</string>
+    <string name="mic_perm_card_title">Privacy</string>
+    <string name="mic_perm_card_body">No audio is stored or uploaded. The detector runs on this phone.</string>
+    <string name="mic_perm_chip_band">Band 300–900 Hz</string>
+    <string name="mic_perm_chip_device">On-device</string>
+
+    <!-- Detect home (Stitch 06) -->
+    <string name="detect_sensor_label">Sensor freq</string>
+    <string name="detect_sensor_value">450–650 Hz</string>
+    <string name="tips_protocol_title">Recording protocol</string>
+    <string name="tips_quiet_title">Keep it quiet</string>
+    <string name="tips_quiet_body">Turn off fans and AC, and stop talking while you record.</string>
+    <string name="tips_distance_title">Get close</string>
+    <string name="tips_distance_body">Hold the phone 10–30 cm from where the mosquito flies.</string>
+    <string name="tips_understood">Understood</string>
+
+    <!-- Recording ready (Stitch 08) -->
+    <string name="review_step">Step 2</string>
+    <string name="review_title">Got it</string>
+    <string name="review_chip_label">Clip</string>
+    <string name="review_chip_value">In memory only</string>
+    <string name="review_play">Play recording</string>
+    <string name="review_pause">Pause recording</string>
+    <string name="review_duration_label">Duration</string>
+    <string name="review_rate_label">Sample rate</string>
+    <string name="review_analyze">Analyze buzz</string>
+
+    <!-- Analyzing (Stitch 09) -->
+    <string name="analyzing_headline">Listening to the wingbeats…</string>
+    <string name="analyzing_band">Detector band</string>
+    <string name="analyzing_step_sound">Sound</string>
+    <string name="analyzing_step_picture">Picture of the sound</string>
+    <string name="analyzing_step_model">AI model…</string>
+    <string name="step_done">Done</string>
+    <string name="step_active">In progress</string>
+    <string name="step_pending">Waiting</string>
+
+    <!-- Learn (Stitch 07) -->
+    <string name="learn_title">Learn</string>
+    <string name="learn_subtitle">Mosquito sounds, which ones spread disease, and how to prevent bites.</string>
+    <string name="learn_filter_all">All topics</string>
+    <string name="learn_filter_dengue">Dengue (Aedes)</string>
+    <string name="learn_filter_malaria">Malaria (Anopheles)</string>
+    <string name="learn_filter_acoustic">Acoustic AI</string>
+    <string name="learn_a1_tag">Dengue vector</string>
+    <string name="learn_a1_meta">WHO fact sheet · 3 min read</string>
+    <string name="learn_a1_title">Aedes aegypti: the main dengue mosquito</string>
+    <string name="learn_a1_body">A daytime biter with white markings that breeds in clean standing water around homes.</string>
+    <string name="learn_a1_link">Read the fact sheet</string>
+    <string name="learn_a2_tag">Malaria vector</string>
+    <string name="learn_a2_meta">WHO fact sheet · 4 min read</string>
+    <string name="learn_a2_title">Anopheles: the mosquito that carries malaria</string>
+    <string name="learn_a2_body">Bites mostly at night. Bed nets and quick testing for fever protect families.</string>
+    <string name="learn_a2_link">Read the fact sheet</string>
+    <string name="learn_a3_tag">Acoustic AI</string>
+    <string name="learn_a3_meta">HumBug project, University of Oxford · 5 min read</string>
+    <string name="learn_a3_title">Wingbeat acoustics: telling mosquitoes apart</string>
+    <string name="learn_a3_body">How phone recordings of the wingbeat, roughly 300–800 Hz, help identify species.</string>
+    <string name="learn_a3_link">Visit the project</string>
+    <string name="learn_a4_tag">Field practice</string>
+    <string name="learn_a4_meta">Kemenkes · 2 min read</string>
+    <string name="learn_a4_title">3M Plus at home: remove breeding sites</string>
+    <string name="learn_a4_body">Drain, cover and recycle containers that hold water, every week.</string>
+    <string name="learn_a4_link">View the guidance</string>
+
+    <!-- Credits (Stitch 51) -->
+    <string name="credits_title">Credits</string>
+    <string name="credits_subtitle">Open data, public guidance and the tools that built BuzzSense.</string>
+    <string name="credits_version">v%1$s</string>
+    <string name="credits_data_title">Acoustic data</string>
+    <string name="credits_data_body">HumBugDB (University of Oxford), BioDCASE mosquito challenge, DengAI</string>
+    <string name="credits_data_chip_label">Wingbeat</string>
+    <string name="credits_data_chip_value">300–800 Hz</string>
+    <string name="credits_guidance_title">Guidance</string>
+    <string name="credits_guidance_body">Public pages from WHO, CDC, PAHO, Puerto Rico Department of Health and Kemenkes</string>
+    <string name="credits_built_title">Built with</string>
+    <string name="credits_built_body">Kotlin Multiplatform, Jetpack Compose, Koog, ONNX Runtime, SQLite, Python</string>
+    <string name="credits_built_chip1">Kotlin / Compose</string>
+    <string name="credits_built_chip2">ONNX Runtime</string>
+    <string name="credits_built_chip3">sqlite-vec</string>
+    <string name="credits_ai_title">AI tools used</string>
+    <string name="credits_ai_body">Claude, Google Stitch, Gemini</string>
+    <string name="credits_ai_note">Design, code and checklist writing</string>
+    <string name="credits_fonts_title">Fonts</string>
+    <string name="credits_fonts_body">Space Grotesk and Hanken Grotesk, SIL Open Font License</string>
+    <string name="credits_team_title">Team</string>
+    <string name="credits_team_body">Howard Leonhart Junaedi (team lead)\nJansen Thoe\nTravis Ainsley Wilvicious</string>
+    <string name="credits_settings_title">Settings</string>
+    <string name="credits_settings_body">Cited guidance and your Gemini API key</string>
+    <string name="credits_footer">Audio never leaves this phone</string>
 
     <!-- Engine not ready (files missing from this build) or a failed run -->
     <string name="engine_unavailable_title">Detector not installed</string>
@@ -74,4 +187,27 @@
     <string name="run_failed_title">Something went wrong</string>
     <string name="run_failed_body">The recording could not be checked. Nothing was saved. Try again.</string>
     <string name="action_try_again">Try again</string>
+    <string name="action_not_now">Not now</string>
+
+    <!-- Settings (About tab) -->
+    <string name="settings_eyebrow">Credits</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_rag_title">Use cited guidance (RAG)</string>
+    <string name="settings_rag_on">On: each action comes from a saved guidance page and shows its source.</string>
+    <string name="settings_rag_off">Off: Gemini writes the checklist alone, without sources. Safety checks still run.</string>
+    <string name="todo_uncited_hint">Written by Gemini without cited guidance. Review before you share.</string>
+    <string name="settings_key_section">Gemini API key</string>
+    <string name="settings_key_saved">A key is saved on this phone. Alerts are written by Gemini.</string>
+    <string name="settings_key_missing">No key yet. Without one, alerts use the fixed checklist. Get a free key at aistudio.google.com/apikey.</string>
+    <string name="settings_key_placeholder">Paste your API key</string>
+    <string name="settings_key_privacy">Encrypted on this phone. Only labels, weather and guidance text are sent to Gemini, never your recording.</string>
+    <string name="settings_key_save">Save and test</string>
+    <string name="settings_key_test">Test key</string>
+    <string name="settings_key_remove">Remove key</string>
+    <string name="settings_key_checking">Checking the key…</string>
+    <string name="settings_key_works">Key works with %1$s.</string>
+    <string name="settings_key_rejected">Gemini rejected the key: %1$s</string>
+    <string name="settings_key_offline">No connection. The key is saved; try again when online.</string>
+    <string name="settings_key_busy">Gemini is busy or rate-limited. The key is saved; try again later.</string>
+    <string name="settings_key_removed">Key removed.</string>
 </resources>

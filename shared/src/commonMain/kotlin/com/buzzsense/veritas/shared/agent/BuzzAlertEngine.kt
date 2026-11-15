@@ -62,8 +62,14 @@ class BuzzAlertEngine(
 ) {
     /**
      * @param forcePrimaryFailure demo/test flag that makes the primary provider fail, to show failover.
+     * @param useGuidance false = bare LLM: no retrieval and no citations; every other guardrail still runs.
      */
-    suspend fun run(clip: AudioClip, language: Language, forcePrimaryFailure: Boolean = false): AgentOutcome {
+    suspend fun run(
+        clip: AudioClip,
+        language: Language,
+        forcePrimaryFailure: Boolean = false,
+        useGuidance: Boolean = true,
+    ): AgentOutcome {
         val events = mutableListOf<TraceEvent>()
         val executor = providers?.newRun(forcePrimaryFailure)
         val tools = BuzzAlertTools(detector, weather, risk, retriever)
@@ -76,6 +82,7 @@ class BuzzAlertEngine(
             fallback = fallback,
             lookupChunks = chunkLookup,
             events = events,
+            useGuidance = useGuidance,
         )
         val agent = AIAgent(
             promptExecutor = executor ?: NoProviderExecutor,

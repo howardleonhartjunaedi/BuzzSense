@@ -31,7 +31,13 @@ class HealthSafetyValidator(
     private val maxActions: Int = 5,
     private val maxActionLength: Int = 220,
 ) {
-    fun validate(draft: AlertDraft, retrieved: List<GuidanceChunk>, canary: CanaryToken): List<ValidationIssue> {
+    /** @param requireCitations false only in bare-LLM mode (no retrieval); every other check still runs. */
+    fun validate(
+        draft: AlertDraft,
+        retrieved: List<GuidanceChunk>,
+        canary: CanaryToken,
+        requireCitations: Boolean = true,
+    ): List<ValidationIssue> {
         val issues = mutableListOf<ValidationIssue>()
 
         if (draft.summary.isBlank()) issues += ValidationIssue.Schema("empty summary")
@@ -43,9 +49,11 @@ class HealthSafetyValidator(
             if (a.text.length > maxActionLength) issues += ValidationIssue.Schema("action too long")
         }
 
-        val ids = retrieved.mapTo(HashSet()) { it.id }
-        draft.actions.map { it.chunkId }.filterNot { it in ids }.distinct()
-            .forEach { issues += ValidationIssue.UnknownCitation(it) }
+        if (requireCitations) {
+            val ids = retrieved.mapTo(HashSet()) { it.id }
+            draft.actions.map { it.chunkId }.filterNot { it in ids }.distinct()
+                .forEach { issues += ValidationIssue.UnknownCitation(it) }
+        }
 
         val allText = buildString {
             append(draft.summary)

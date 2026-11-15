@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.buzzsense.veritas.app.ui.theme.BuzzTheme
 
@@ -33,6 +34,8 @@ fun BuzzTextField(
     singleLine: Boolean = true,
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    /** e.g. PasswordVisualTransformation() for secrets such as an API key. */
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val scheme = BuzzTheme.colorScheme
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.xs)) {
@@ -45,6 +48,7 @@ fun BuzzTextField(
             singleLine = singleLine,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
             textStyle = BuzzTheme.typography.bodyLarge,
             shape = BuzzTheme.shapes.small,
             placeholder = placeholder?.let { { Text(it, color = scheme.onSurface.copy(alpha = 0.4f)) } },

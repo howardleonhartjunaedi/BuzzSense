@@ -6,6 +6,7 @@ package com.buzzsense.veritas.shared.onnx
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import com.buzzsense.veritas.shared.guardrails.SpeechScore
 import com.buzzsense.veritas.shared.guardrails.VoiceActivityDetector
 import com.buzzsense.veritas.shared.rag.Embedder
 import java.nio.LongBuffer
@@ -20,13 +21,17 @@ private fun session(bytes: ByteArray): OrtSession =
  * Silero VAD v5/v6 (ONNX; the app ships v6.2.3), run on 512-sample chunks at 16 kHz plus 64 samples of context.
  * Inputs: `input` [1, 576], `state` [2, 1, 128], `sr` int64; outputs: prob [1, 1], new state.
  */
-class SileroVad(onnx: ByteArray) : VoiceActivityDetector, AutoCloseable {
+class SileroVad(onnx: ByteArray, private val chunkThreshold: Float = 0.5f) : VoiceActivityDetector, AutoCloseable {
     private val s = session(onnx)
 
-    override suspend fun speechProbability(samples: FloatArray, sampleRateHz: Int): Float {
+    override suspend fun analyze(samples: FloatArray, sampleRateHz: Int): SpeechScore {
         val audio = resampleLinear(samples, sampleRateHz, 16_000)
         var state = Array(2) { Array(1) { FloatArray(128) } }
         var maxProb = 0f
+        var chunks = 0
+        var speechChunks = 0
+        var run = 0
+        var longestRun = 0
         OnnxTensor.createTensor(env, LongBuffer.wrap(longArrayOf(16_000)), longArrayOf()).use { sr ->
             var off = 0
             while (off + CHUNK <= audio.size) {
@@ -44,13 +49,19 @@ class SileroVad(onnx: ByteArray) : VoiceActivityDetector, AutoCloseable {
                             @Suppress("UNCHECKED_CAST")
                             state = out[1].value as Array<Array<FloatArray>>
                             if (p > maxProb) maxProb = p
+                            chunks++
+                            if (p >= chunkThreshold) { speechChunks++; run++; if (run > longestRun) longestRun = run } else run = 0
                         }
                     }
                 }
                 off += CHUNK
             }
         }
-        return maxProb
+        return SpeechScore(
+            maxProbability = maxProb,
+            speechFraction = if (chunks == 0) 0f else speechChunks.toFloat() / chunks,
+            longestSpeechMs = longestRun * CHUNK * 1000 / 16_000,
+        )
     }
 
     override fun close() = s.close()

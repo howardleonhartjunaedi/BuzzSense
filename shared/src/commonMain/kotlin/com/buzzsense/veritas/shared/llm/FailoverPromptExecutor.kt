@@ -22,6 +22,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.TimeSource
 
 /** One provider in the chain. [executor] is a Koog executor bound to [model]. */
 class ProviderTier(
@@ -164,9 +165,11 @@ class FailoverPromptExecutor internal constructor(
                 attempt++
                 try {
                     if (forcePrimaryFailure && index == 0) error("Status code: 503 (forced failure test flag)")
+                    val started = TimeSource.Monotonic.markNow()
                     val result = call(tier)
                     chain.onSuccess(tier)
                     lastTier = tier.id
+                    log("llm", "${tier.id} answered (model ${tier.model.id}, ${started.elapsedNow().inWholeMilliseconds} ms)")
                     return result
                 } catch (e: CancellationException) {
                     throw e

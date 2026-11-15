@@ -60,6 +60,22 @@ class GeminiLiveTest {
         println("Gemini draft: ${ready.alert.draft}")
     }
 
+    /** Bare mode (cited guidance off): Gemini alone, still through the health-safety validator. */
+    @Test
+    fun bareGeminiWritesAValidatedChecklistWithoutRag() = runTest(timeout = 2.minutes) {
+        val apiKey = key ?: return@runTest
+        val engine = BuzzAlertEngine(
+            detector = WingbeatDetector(AcousticFeatures(TEST_SPEC), FixedClassifier(0.9f, 0.8f), DominantFrequencyBaseline(425f..809f)),
+            weather = FixedWeather,
+            retriever = GuidanceRetriever { error("retrieval must not run when guidance is off") },
+            chunkLookup = { emptyList() },
+            providers = ProviderChain(listOf(CloudProviders.gemini(apiKey))),
+        )
+        val ready = assertIs<AgentOutcome.AlertReady>(engine.run(AudioClip(toneSamples(), 8_000), Language.EN, useGuidance = false))
+        assertEquals(ProviderTierId.GEMINI, ready.trace.provider, "fell back instead of answering: ${ready.trace.events}")
+        println("Bare Gemini draft: ${ready.alert.draft}")
+    }
+
     /** Not Aedes → the malaria branch of the query, against the real guidance.db from tools/guidance. */
     @Test
     fun geminiWritesAMalariaChecklistFromTheRealCorpus() = runTest(timeout = 2.minutes) {

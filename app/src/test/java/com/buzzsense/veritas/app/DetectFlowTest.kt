@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -65,6 +66,7 @@ class AgentOutcomeMapperTest {
         val ui = AgentOutcomeMapper.map(alertReady())
         assertEquals(ResultKind.LikelyAedes, ui.kind)
         assertEquals(0.8f, ui.confidence!!, 1e-6f)
+        assertEquals(600f, ui.peakHz!!, 0f)
         val alert = ui.alert!!
         assertEquals(ProviderTierId.GEMINI, alert.provider)
         assertEquals("https://example.org/3m", alert.officialUrl)
@@ -76,6 +78,15 @@ class AgentOutcomeMapperTest {
     }
 
     @Test
+    fun bareModeAlertIsMarkedUncited() {
+        val bare = alertReady().let { it.copy(alert = it.alert.copy(citations = emptyMap())) }
+        val alert = AgentOutcomeMapper.map(bare).alert!!
+        assertEquals(false, alert.cited)
+        assertNull(alert.officialUrl)
+        assertTrue(alert.entries.all { it.source == null })
+    }
+
+    @Test
     fun localMessagesMapToResultsWithoutChecklist() {
         val noMosquito = AgentOutcome.LocalMessage("No mosquito heard.", DecisionTrace(detection = detection(Verdict.NO, Verdict.NO)))
         val unsure = AgentOutcome.LocalMessage("Not sure.", DecisionTrace(detection = detection(Verdict.YES, Verdict.UNSURE)))
@@ -84,15 +95,18 @@ class AgentOutcomeMapperTest {
         assertEquals(ResultKind.NotSure, AgentOutcomeMapper.map(unsure).kind)
         assertEquals(ResultKind.VoiceHeard, AgentOutcomeMapper.map(speech).kind)
         assertTrue(listOf(noMosquito, unsure, speech).all { AgentOutcomeMapper.map(it).alert == null })
+        // No wingbeat heard (or unsure): no peak is shown.
+        assertTrue(listOf(noMosquito, unsure, speech).all { AgentOutcomeMapper.map(it).peakHz == null })
     }
 
     @Test
-    fun notAedesConfidenceIsTheComplement() {
+    fun notAedesShowsNoConfidence() {
+        // A low Aedes vote (0.09 on an unfamiliar Tanzania recording) must not appear as "91% sure".
         val ui = AgentOutcomeMapper.map(
-            AgentOutcome.LocalMessage("x", DecisionTrace(detection = detection(Verdict.YES, Verdict.NO, aedesScore = 0.1f))),
+            AgentOutcome.LocalMessage("x", DecisionTrace(detection = detection(Verdict.YES, Verdict.NO, aedesScore = 0.09f))),
         )
         assertEquals(ResultKind.NotDengue, ui.kind)
-        assertEquals(0.9f, ui.confidence!!, 1e-6f)
+        assertNull(ui.confidence)
     }
 }
 
@@ -104,13 +118,19 @@ class DetectViewModelTest {
         private val recordFails: Boolean = false,
     ) : DetectionRunner {
         var lastClip: AudioClip? = null
+        val clips = mutableListOf<AudioClip>()
+        var played = 0
         override suspend fun record(seconds: Int, onProgress: (Float) -> Unit): AudioClip {
             if (recordFails) error("microphone is busy")
             onProgress(1f)
-            return AudioClip(FloatArray(8_000 * seconds) { 0.1f }, 8_000).also { lastClip = it }
+            return AudioClip(FloatArray(8_000 * seconds) { 0.1f }, 8_000).also { lastClip = it; clips += it }
         }
         override fun stopRecording() = Unit
         override suspend fun analyze(clip: AudioClip, language: Language): AgentOutcome = outcome()
+        override suspend fun play(clip: AudioClip) {
+            check(!clip.isWiped) { "played a wiped clip" }
+            played++
+        }
     }
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -121,11 +141,20 @@ class DetectViewModelTest {
         val runner = FakeRunner()
         val vm = DetectViewModel(runner, Language.EN)
         vm.onRecord()
+        // Recording ends on the Review step; the clip waits in memory until the user decides.
+        val review = vm.state.value.step as DetectStep.Review
+        assertEquals(5f, review.durationSeconds, 0f)
+        assertEquals(8_000, review.sampleRateHz)
+        assertFalse(runner.lastClip!!.isWiped)
+        vm.onAnalyze()
         val step = vm.state.value.step as DetectStep.Result
         assertEquals(ResultKind.LikelyAedes, step.detection.kind)
         assertEquals(3, step.detection.alert!!.entries.size)
         assertEquals(1f, vm.recordingProgress.value, 0f)
         assertTrue("audio must not outlive the run", runner.lastClip!!.isWiped)
+        // "Record again" goes back to the Detect home screen; it does not start recording by itself.
+        vm.onBackHome()
+        assertEquals(DetectStep.Home, vm.state.value.step)
     }
 
     @Test
@@ -133,10 +162,51 @@ class DetectViewModelTest {
         val runner = FakeRunner(outcome = { throw EngineUnavailableException(listOf("assets/silero_vad.onnx")) })
         val vm = DetectViewModel(runner, Language.EN)
         vm.onRecord()
+        vm.onAnalyze()
         assertEquals(DetectStep.Unavailable(listOf("assets/silero_vad.onnx")), vm.state.value.step)
         assertTrue(runner.lastClip!!.isWiped)
         vm.onBackHome()
         assertEquals(DetectStep.Home, vm.state.value.step)
+    }
+
+    @Test
+    fun recordAgainOnReviewWipesTheFirstClip() = runTest {
+        val runner = FakeRunner()
+        val vm = DetectViewModel(runner, Language.EN)
+        vm.onRecord()
+        vm.onRecordAgain()
+        assertEquals(2, runner.clips.size)
+        assertTrue("the discarded clip is wiped", runner.clips[0].isWiped)
+        assertFalse(runner.clips[1].isWiped)
+        assertTrue(vm.state.value.step is DetectStep.Review)
+    }
+
+    @Test
+    fun backFromReviewWipesTheClip() = runTest {
+        val runner = FakeRunner()
+        val vm = DetectViewModel(runner, Language.EN)
+        vm.onRecord()
+        vm.onBackHome()
+        assertEquals(DetectStep.Home, vm.state.value.step)
+        assertTrue(runner.lastClip!!.isWiped)
+        // Nothing left to analyze or play.
+        vm.onAnalyze()
+        vm.onTogglePlay()
+        assertEquals(DetectStep.Home, vm.state.value.step)
+        assertEquals(0, runner.played)
+    }
+
+    @Test
+    fun playbackReadsTheInMemoryClipAndEnds() = runTest {
+        val runner = FakeRunner()
+        val vm = DetectViewModel(runner, Language.EN)
+        vm.onRecord()
+        vm.onTogglePlay()
+        assertEquals(1, runner.played)
+        // The fake finishes at once, so the step is back to not playing.
+        assertEquals(false, (vm.state.value.step as DetectStep.Review).playing)
+        vm.onAnalyze()
+        assertTrue(runner.lastClip!!.isWiped)
     }
 
     @Test

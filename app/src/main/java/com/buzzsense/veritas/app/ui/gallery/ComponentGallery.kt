@@ -25,6 +25,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.buzzsense.veritas.app.ui.components.BuzzActionCard
+import com.buzzsense.veritas.app.ui.components.BuzzArticleCard
+import com.buzzsense.veritas.app.ui.components.BuzzFilterChips
+import com.buzzsense.veritas.app.ui.components.BuzzFrequencyCompare
+import com.buzzsense.veritas.app.ui.components.BuzzInfoCard
+import com.buzzsense.veritas.app.ui.components.BuzzPlaybackRow
+import com.buzzsense.veritas.app.ui.components.BuzzProgressStep
+import com.buzzsense.veritas.app.ui.components.BuzzResultPanel
+import com.buzzsense.veritas.app.ui.components.BuzzStatusDot
+import com.buzzsense.veritas.app.ui.components.BuzzStepBadge
+import com.buzzsense.veritas.app.ui.components.BuzzTextChip
+import com.buzzsense.veritas.app.ui.components.FrequencyBar
+import com.buzzsense.veritas.app.ui.components.StepState
 import com.buzzsense.veritas.app.ui.components.BuzzAlertDialog
 import com.buzzsense.veritas.app.ui.components.BuzzBackButton
 import com.buzzsense.veritas.app.ui.components.BuzzBottomNavBar
@@ -106,6 +118,10 @@ fun ComponentGallery(modifier: Modifier = Modifier) {
         item { GallerySection("13 · Overlays", "Sheet & dialog") { OverlaysDemo() } }
         item { GallerySection("14 · Visualizer", "Spectrum") { BuzzSpectrumCard("Spectral analysis", "480 Hz", SampleSpectrum) } }
         item { GallerySection("15 · States", "Messages & progress") { StatesDemo() } }
+        item { GallerySection("16 · Onboarding", "Badges & illustrations") { OnboardingDemo() } }
+        item { GallerySection("17 · Review & analyze", "Playback & progress steps") { ReviewDemo() } }
+        item { GallerySection("18 · Learn & Credits", "Filters, articles & info cards") { LearnCreditsDemo() } }
+        item { GallerySection("19 · Results", "Result panel") { BuzzResultPanel(ResultKind.LikelyAedes, 0.82f, peakHz = 584f) } }
         item { BuzzDisclaimer() }
     }
 }
@@ -398,6 +414,59 @@ private fun StatesDemo() {
             actions = { BuzzButton(text = "Allow microphone", onClick = {}, modifier = Modifier.fillMaxWidth()) },
         )
         BuzzProgressIndicator()
+    }
+}
+
+@Composable
+private fun OnboardingDemo() {
+    Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.md)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+            BuzzStepBadge("1 of 3")
+            BuzzStatusDot("Audio stays on this phone")
+        }
+        BuzzCard {
+            BuzzFrequencyCompare(
+                listOf(FrequencyBar("Culex", 0.66f), FrequencyBar("Aedes", 1f, highlighted = true), FrequencyBar("Anopheles", 0.78f)),
+                barHeight = 112.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReviewDemo() {
+    var playing by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.md)) {
+        BuzzPlaybackRow(playing = playing, onTogglePlay = { playing = !playing }, duration = "0:05", playLabel = "Play", pauseLabel = "Pause")
+        BuzzCard(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            BuzzProgressStep("Sound", BuzzIcons.Mic, StepState.Done)
+            BuzzProgressStep("Picture of the sound", BuzzIcons.GraphicEq, StepState.Active)
+            BuzzProgressStep("AI model", BuzzIcons.AutoAwesome, StepState.Pending)
+        }
+    }
+}
+
+@Composable
+private fun LearnCreditsDemo() {
+    var filter by remember { mutableIntStateOf(0) }
+    Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.md)) {
+        BuzzFilterChips(listOf("All topics", "Dengue (Aedes)", "Malaria (Anopheles)", "Acoustic AI"), filter, { filter = it })
+        BuzzArticleCard(
+            tag = "Dengue vector",
+            meta = "WHO fact sheet · 3 min read",
+            title = "Aedes aegypti: the main dengue mosquito",
+            summary = "A daytime biter with white markings that breeds in clean standing water.",
+            linkLabel = "Read the fact sheet",
+            icon = BuzzIcons.Warning,
+            onClick = {},
+            image = androidx.compose.ui.res.painterResource(com.buzzsense.veritas.app.R.drawable.learn_aedes),
+        )
+        BuzzInfoCard(title = "Built with", icon = BuzzIcons.Code, body = "Kotlin Multiplatform, Jetpack Compose, Koog") {
+            Row(horizontalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.xs)) {
+                BuzzTextChip("Kotlin / Compose")
+                BuzzTextChip("ONNX Runtime")
+            }
+        }
     }
 }
 
