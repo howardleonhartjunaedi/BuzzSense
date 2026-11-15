@@ -1,0 +1,6 @@
+# Data pipeline (neural-free). Install into Audio File/.venv:
+#   python -m venv .venv && .venv/Scripts/python.exe -m pip install -r "../App Folder/pipeline/requirements.txt"
+numpy==2.5.4
+scipy==1.18.1
+soundfile==0.14.0
+sqlite-vec==0.1.9   # must match vec_version() of the stores and app/src/main/jniLibs (tools/sqlite-vec)

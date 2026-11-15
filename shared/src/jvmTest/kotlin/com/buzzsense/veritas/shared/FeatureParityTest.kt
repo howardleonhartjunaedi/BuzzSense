@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 /**
  * Eval 6 at unit level: the Kotlin port must reproduce `build_rag.features()`.
  * Fixture and spec are exported from the pipeline:
- * `python -I pipeline/export_parity_fixture.py --data data/raw --rag data/rag --out <jvmTest/resources>/parity_fixture.json`
+ * `python -I "../App Folder/pipeline/export_parity_fixture.py" (from Audio File/) --data data/raw --rag data/rag --out <jvmTest/resources>/parity_fixture.json`
  * Regenerate both files whenever feature_spec.json changes.
  */
 class FeatureParityTest {

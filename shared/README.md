@@ -118,7 +118,7 @@ ignores `params.schema`. On a phone, the tier is checked only by
 ## Files the app must ship (`app/src/main/assets/`)
 
 `feature_spec.json` (from `Audio File/data/rag/`) and the slim train-split `jumantik_rag.sqlite`
-(from `Audio File/pipeline/export_slim_store.py`, 127 MB, git-ignored),
+(from `pipeline/export_slim_store.py`, run in `Audio File/`, 127 MB, git-ignored),
 `guidance.db` (built by `tools/guidance/build_guidance_db.py`, see its README), `silero_vad.onnx` (Silero VAD v6.2.3, MIT). The app manifest declares `INTERNET` and
 `ACCESS_NETWORK_STATE` (cloud tiers, Open-Meteo, offline detection). Required: `libvec0.so` (sqlite-vec 0.1.9, MIT/Apache-2.0, built 16 KB page-aligned by `tools/sqlite-vec/build_android.sh`) in
 `app/src/main/jniLibs/<abi>/`, extracted on install (`useLegacyPackaging`). Licences are in `assets/licenses/`. Optional: the Gemma `.litertlm` model in `filesDir/llm/` (see above)

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAG Build Progress</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1d1d1b;--mute:#6b6a65;--line:#e4e2db;--acc:#2f7d5b;--warn:#b5482e;--bar:#e9e7e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#161615;--card:#1f1f1d;--ink:#ecebe6;--mute:#9b9a94;--line:#33322f;--acc:#5fbf92;--warn:#e27a5f;--bar:#2c2b28}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mute);margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.step{border:1px solid var(--line);border-radius:999px;padding:6px 10px;text-align:center;font-size:13px;color:var(--mute);background:var(--card)}
+.step.on{border-color:var(--acc);color:var(--acc);font-weight:600}.step.ok{background:var(--acc);color:#fff;border-color:var(--acc)}
+.bar{height:14px;background:var(--bar);border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc);width:0;transition:width .6s}
+.big{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.stats div{font-size:13px;color:var(--mute)}.stats b{display:block;font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:500}
+pre{margin:0;font-size:12px;white-space:pre-wrap;color:var(--mute);max-height:220px;overflow:auto}
+.err{color:var(--warn)}
+@media (max-width:600px){.steps,.stats{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main>
+<h1>Jumantik audio → RAG build</h1>
+<p class="sub">BioDCASE + HumBugDB → <code>jumantik_rag.sqlite</code> · refreshes every 1 s · <span id="upd">—</span></p>
+<div class="steps" id="steps"></div>
+<div class="card">
+  <div id="stage" style="color:var(--mute)">Waiting for the build to start…</div>
+  <div class="big" id="pct">0%</div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="stats">
+    <div>Done<b id="done">—</b></div><div>Clips in store<b id="win">—</b></div>
+    <div>Errors<b id="errs">—</b></div><div>Elapsed / left<b id="time">—</b></div>
+  </div>
+</div>
+<div class="card"><b>Retrieval accuracy</b> <span style="color:var(--mute)">(test clips never put in the store)</span>
+  <div id="eval" style="margin-top:8px;color:var(--mute)">Appears when the build finishes.</div></div>
+<div class="card"><b>Fixing unseen setups (steps 1–3)</b> <span id="exst" style="color:var(--mute)"></span>
+  <div style="color:var(--mute);font-size:13px;margin-top:4px">Tuned by hiding D1, D3, D4 one at a time (training data only). The best fix is picked there, then tested once on the real test set.</div>
+  <div id="lodo" style="margin-top:8px;color:var(--mute)">Not started.</div>
+  <div id="extest" style="margin-top:12px"></div></div>
+<div class="card"><b>Log</b><pre id="log"></pre></div>
+</main><script>
+const STEPS=["biodcase features","humbugdb features","writing database","build done"];
+const fmt=n=>n==null?"—":Number(n).toLocaleString();
+const dur=s=>s==null||!isFinite(s)?"—":s<60?Math.round(s)+"s":s<3600?Math.round(s/60)+"m":(s/3600).toFixed(1)+"h";
+async function tick(){
+  try{
+    const d=await (await fetch("/api",{cache:"no-store"})).json(), p=d.progress;
+    document.getElementById("upd").textContent="checked "+new Date().toLocaleTimeString();
+    const si=p?STEPS.indexOf(p.stage):-1, evalDone=!!d.eval;
+    document.getElementById("steps").innerHTML=STEPS.concat(["accuracy check"]).map((s,i)=>{
+      const ok=i<si||(i===3&&si===3)||(i===4&&evalDone), on=i===si&&!ok||(i===4&&si===3&&!evalDone);
+      return `<div class="step ${ok?"ok":on?"on":""}">${s}</div>`}).join("");
+    if(p){
+      const f=p.total?p.done/p.total:0, pct=Math.floor(f*100);
+      document.getElementById("stage").textContent="Now: "+p.stage+" (last update "+p.updated+")";
+      document.getElementById("pct").textContent=pct+"%";
+      document.getElementById("fill").style.width=pct+"%";
+      document.getElementById("done").textContent=fmt(p.done)+" / "+fmt(p.total);
+      document.getElementById("win").textContent=fmt(p.windows);
+      const e=document.getElementById("errs");e.textContent=fmt(p.errors);e.className=p.errors?"err":"";
+      const left=f>0.01&&f<1?p.elapsed_s*(1-f)/f:null;
+      document.getElementById("time").textContent=dur(p.elapsed_s)+" / "+(f>=1?"0s":dur(left));
+    }
+    if(d.eval){
+      document.getElementById("eval").innerHTML="<table><tr><th>Method</th><th>Test clips</th><th>Aedes recall</th><th>False alarms</th><th>Accuracy</th></tr>"+
+        d.eval.map(r=>`<tr><td>${r.method}</td><td>${fmt(r.n)}</td><td>${r.aedes_recall}</td><td>${r.aedes_false_alarm}</td><td>${r.class3_acc}</td></tr>`).join("")+"</table>";
+    }
+    const x=d.exp, pc=v=>v==null?"—":(v*100).toFixed(1)+"%";
+    if(x){
+      document.getElementById("exst").textContent="· "+x.stage+" · "+dur(x.elapsed_s)+" · updated "+x.updated;
+      const label={"base":"Current store","s1_tilt":"1. Remove mic tone (per clip)","s1_dom":"1. Remove setup average (reference only)",
+        "s2_harm":"2. Harmonic pattern only","s12":"1 + 2 combined"};
+      const nm=v=>(label[v.replace("+bal","")]||v)+(v.endsWith("+bal")?" + 3. balanced":"");
+      if(x.lodo.length) document.getElementById("lodo").innerHTML="<table><tr><th>Variant</th><th>Aedes caught</th><th>False alarms</th><th>Balanced recall</th></tr>"+
+        x.lodo.map(r=>`<tr${r.variant===x.chosen?' style="font-weight:700;color:var(--acc)"':""}><td>${nm(r.variant)}${r.variant===x.chosen?" ✓ chosen":""}</td><td>${pc(r.aedes_recall)}</td><td>${pc(r.aedes_false_alarm)}</td><td>${pc(r.balanced_recall)}</td></tr>`).join("")+"</table>";
+      if(x.test.length){
+        const doms=[...new Set(x.test.flatMap(t=>t.per_domain.map(p=>p.domain)))];
+        document.getElementById("extest").innerHTML="<b>Final test (run once)</b><table><tr><th>Domain</th>"+x.test.map(t=>`<th>${nm(t.variant)}<br><span style="font-weight:400">caught / false alarm</span></th>`).join("")+"</tr>"+
+          ["overall","domain_average"].concat(doms).map(dm=>`<tr${dm==="D2"?' style="font-weight:700"':""}><td>${dm==="overall"?"All test clips":dm==="domain_average"?"Average over D1–D5":dm}</td>`+
+            x.test.map(t=>{const r=dm in t?t[dm]:t.per_domain.find(p=>p.domain===dm)||{};return `<td>${pc(r.aedes_recall)} / ${pc(r.aedes_false_alarm)}</td>`}).join("")+"</tr>").join("")+"</table>";
+      }
+    }
+    document.getElementById("log").textContent=(d.log||[]).join("\n")+(d.eval_log?"\n\n"+d.eval_log:"");
+  }catch(e){document.getElementById("upd").textContent="dashboard server not reachable"}
+}
+tick();setInterval(tick,1000);
+</script></body></html>

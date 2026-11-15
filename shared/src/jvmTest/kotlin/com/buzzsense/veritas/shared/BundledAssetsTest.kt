@@ -30,7 +30,7 @@ import kotlin.time.Duration.Companion.minutes
 /**
  * The files the app ships, loaded from app/src/main/assets the way AndroidBuzzAlert loads
  * them, run on the real dataset clips in parity_fixture.json. Needs SQLITE_VEC_LIB and the
- * slim jumantik_rag.sqlite (git-ignored; see Audio File/pipeline/export_slim_store.py).
+ * slim jumantik_rag.sqlite (git-ignored; see pipeline/export_slim_store.py).
  */
 class BundledAssetsTest {
 

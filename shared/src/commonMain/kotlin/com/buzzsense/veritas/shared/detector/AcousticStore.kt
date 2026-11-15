@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 data class Neighbour(val clipId: String, val class3: String, val species: String, val distance: Float)
 
 /**
- * The acoustic store `jumantik_rag.sqlite` built by `Audio File/pipeline/build_rag.py`:
+ * The acoustic store `jumantik_rag.sqlite` built by `pipeline/build_rag.py`:
  *
  * ```sql
  * clips(id, clip_id, source, path, offset_s, species, class3, domain, split, device, country,

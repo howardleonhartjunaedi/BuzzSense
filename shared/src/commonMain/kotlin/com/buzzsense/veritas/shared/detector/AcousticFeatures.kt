@@ -14,7 +14,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * `feature_spec.json` written by `Audio File/pipeline/build_rag.py`. It is the single
+ * `feature_spec.json` written by `pipeline/build_rag.py`. It is the single
  * source of truth for the acoustic features; never hard-code these numbers.
  */
 @Serializable
