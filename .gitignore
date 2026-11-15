@@ -31,3 +31,7 @@ replay_pid*.log
 /tools/guidance/.venv/
 /tools/guidance/models/
 /tools/guidance/**/__pycache__/
+
+# slim acoustic store (127 MB, over GitHub's 100 MB limit): rebuild with Audio File/pipeline/export_slim_store.py
+/app/src/main/assets/jumantik_rag.sqlite
+/tools/sqlite-vec/build/

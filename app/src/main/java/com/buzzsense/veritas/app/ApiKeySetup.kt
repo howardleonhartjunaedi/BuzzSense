@@ -72,7 +72,10 @@ fun GeminiKeySetup(modifier: Modifier = Modifier) {
                     scope.launch {
                         val key = input.ifBlank { store.load(KeystoreApiKeyStore.Provider.GEMINI).orEmpty() }
                         val result = withContext(Dispatchers.IO) {
-                            if (input.isNotBlank()) store.save(KeystoreApiKeyStore.Provider.GEMINI, key)
+                            if (input.isNotBlank()) {
+                                store.save(KeystoreApiKeyStore.Provider.GEMINI, key)
+                                context.appContainer.onKeysChanged()
+                            }
                             CloudProviders.gemini(key).check()
                         }
                         saved = true
@@ -92,6 +95,7 @@ fun GeminiKeySetup(modifier: Modifier = Modifier) {
             if (saved) {
                 OutlinedButton(enabled = !busy, onClick = {
                     store.remove(KeystoreApiKeyStore.Provider.GEMINI)
+                    scope.launch { context.appContainer.onKeysChanged() }
                     saved = false
                     status = "Key removed."
                 }) { Text("Remove") }

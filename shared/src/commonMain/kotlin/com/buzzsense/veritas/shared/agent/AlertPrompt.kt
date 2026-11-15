@@ -2,6 +2,12 @@ package com.buzzsense.veritas.shared.agent
 
 import com.buzzsense.veritas.shared.guardrails.CanaryToken
 import com.buzzsense.veritas.shared.guardrails.UntrustedFence
+import ai.koog.prompt.structure.StructuredRequest
+import ai.koog.prompt.structure.StructuredRequestConfig
+import ai.koog.prompt.structure.json.JsonStructure
+import com.buzzsense.veritas.shared.model.AlertAction
+import com.buzzsense.veritas.shared.model.AlertDraft
+import com.buzzsense.veritas.shared.model.Urgency
 import com.buzzsense.veritas.shared.model.DetectionResult
 import com.buzzsense.veritas.shared.model.GuidanceChunk
 import com.buzzsense.veritas.shared.model.Language
@@ -49,4 +55,29 @@ internal object AlertPrompt {
     }
 
     private fun pct(x: Float) = "${(x * 100).roundToInt()}%"
+
+    /**
+     * Structured output in Koog's Manual mode: the JSON schema and one example go into the
+     * prompt as text. Koog would otherwise pick Native mode from the *session* model (Gemini)
+     * and send a Google-format schema in `params.schema` to whichever tier answers. LiteRT
+     * ignores that parameter, so Gemma got no format at all, and Claude/OpenAI got a schema
+     * written for Google. Text instructions work on every tier; the validator still checks.
+     */
+    val structuredRequest: StructuredRequestConfig<AlertDraft> = StructuredRequestConfig(
+        default = StructuredRequest.Manual(
+            JsonStructure.create<AlertDraft>(
+                examples = listOf(
+                    AlertDraft(
+                        summary = "One short sentence on what was heard and why it matters today.",
+                        actions = listOf(
+                            AlertAction("A concrete step the family can take today.", "id-of-the-document-it-came-from"),
+                            AlertAction("Another step from the documents.", "id-of-the-document-it-came-from"),
+                            AlertAction("A third step from the documents.", "id-of-the-document-it-came-from"),
+                        ),
+                        urgency = Urgency.MEDIUM,
+                    ),
+                ),
+            ),
+        ),
+    )
 }

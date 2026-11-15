@@ -34,6 +34,13 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        jniLibs {
+            // Extract native libs to nativeLibraryDir on install: SQLite loads the sqlite-vec
+            // extension (jniLibs/<abi>/libvec0.so) by file path, which a lib kept inside the APK lacks.
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
@@ -46,6 +53,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

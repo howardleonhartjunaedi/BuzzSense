@@ -36,6 +36,8 @@ enum class ResultKind(
     NotDengue(R.string.result_not_dengue_title, R.string.result_not_dengue_body, BuzzIcons.Check, IconChipTone.Brand, StatusTone.Safe),
     NotSure(R.string.result_not_sure_title, R.string.result_not_sure_body, BuzzIcons.Help, IconChipTone.Watch, StatusTone.Watch),
     NoMosquito(R.string.result_none_title, R.string.result_none_body, BuzzIcons.VolumeOff, IconChipTone.Neutral, StatusTone.Neutral),
+    /** Speech gate: voices were heard, so the clip was deleted before the detector ran. */
+    VoiceHeard(R.string.result_voice_title, R.string.result_voice_body, BuzzIcons.MicOff, IconChipTone.Watch, StatusTone.Watch),
     ;
 
     companion object {
@@ -56,6 +58,7 @@ val ResultKind.accentColor: Color
         ResultKind.NotDengue -> BuzzTheme.colors.resultSafe
         ResultKind.NotSure -> BuzzTheme.colors.resultWatch
         ResultKind.NoMosquito -> BuzzTheme.colorScheme.outline
+        ResultKind.VoiceHeard -> BuzzTheme.colors.resultWatch
     }
 
 /** Full-screen result block: chip, display headline, big two-tone %, bar. */

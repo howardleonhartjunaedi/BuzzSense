@@ -156,7 +156,7 @@ internal fun buzzAlertStrategy(deps: RunDeps): AIAgentGraphStrategy<AlertRequest
                             user(AlertPrompt.user(input.context.detection, input.context.weather, input.context.risk, input.chunks, fence))
                         }
                     }
-                    requestLLMStructured<AlertDraft>()
+                    requestLLMStructured(AlertPrompt.structuredRequest)
                 }
                 response.fold(
                     onSuccess = { ComposeResult.Draft(input, it.data) },

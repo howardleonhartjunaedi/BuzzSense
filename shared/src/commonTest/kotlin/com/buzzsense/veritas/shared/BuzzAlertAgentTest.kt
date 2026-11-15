@@ -87,6 +87,27 @@ class BuzzAlertAgentTest {
         assertEquals(ProviderTierId.FIXED_FALLBACK, ready.trace.provider)
     }
 
+    /**
+     * The on-device LiteRT tier ignores a native response schema, so the request must carry
+     * the format as text. Here Gemini is rejected (401) and a Gemma-like model answers with
+     * fenced JSON, as small local models tend to.
+     */
+    @Test
+    fun onDeviceTierGetsFormatInstructionsAndItsJsonIsParsed() = runTest {
+        val gemini = ScriptedExecutor({ error("Status code: 401 API key not valid") })
+        val gemma = ScriptedExecutor({ "```json\n" + goodDraftJson() + "\n```" })
+        val out = engine(
+            0.9f, 0.8f,
+            ProviderTier(ProviderTierId.GEMINI, gemini, model),
+            ProviderTier(ProviderTierId.ON_DEVICE, gemma, ON_DEVICE_MODEL, requiresNetwork = false),
+        ).run(clip(), Language.EN)
+        val ready = assertIs<AgentOutcome.AlertReady>(out, "expected an alert, got $out")
+        assertEquals(ProviderTierId.ON_DEVICE, ready.trace.provider)
+        val sent = gemma.prompts.single()
+        assertEquals(null, sent.params.schema, "LiteRT ignores params.schema; the format must be in the messages")
+        assertTrue(sent.toString().contains("chunk_id"), "format instructions missing from the on-device prompt")
+    }
+
     @Test
     fun noProviderConfiguredStillGivesFixedChecklist() = runTest {
         val out = engine(0.9f, 0.8f).run(clip(), Language.ES)

@@ -3,7 +3,7 @@
 Kotlin Multiplatform module (Android + JVM) with everything that is not UI:
 the Koog agent and its strategy graph, the two-stage wingbeat detector (kNN over
 the pipeline's acoustic store), on-device RAG, guardrails and provider failover.
-The Compose UI in `:app` calls one function:
+The Compose UI in `:app` reaches it through `AppContainer` → `DetectViewModel` (see `app/.../ui/detect/`); underneath, it is one call:
 
 ```kotlin
 val engine = AndroidBuzzAlert.create(context) // f0 baseline band defaults to 425–809 Hz (train split)
@@ -64,7 +64,7 @@ start → detect ─(no mosquito / Unsure / speech)→ local_message → finish
 
 Detect, context and retrieve are deterministic nodes that call tools through
 `ToolGate` (per-node allowlist; compose has no tools). The LLM runs once in
-`compose` via `requestLLMStructured<AlertDraft>()` and never sees audio.
+`compose` via `requestLLMStructured(AlertPrompt.structuredRequest)` (Koog Manual mode) and never sees audio.
 
 ## Failover
 
@@ -91,12 +91,37 @@ full graph run against the real API; without the variable it is skipped. The def
 `Gemini3_5FlashLite` (about 1 s per call; the 2.5 models return 404 for new keys). Error text is passed through `FailureClassifier.redactSecrets`, because
 Koog sends the key as a `?key=` query parameter.
 
+## On-device model (tier 3, LiteRT)
+
+Koog's LiteRT client runs Gemma 4 E2B, the file `gemma-4-E2B-it.litertlm` (2.59 GB) from
+Hugging Face `litert-community/gemma-4-E2B-it-litert-lm`, under Google's Gemma terms. The
+app never downloads it by itself. Until the file is present, `OnDeviceLlm.tier()` returns
+null and an offline run goes straight to the fixed checklist.
+
+- **In the app:** `OnDeviceLlm.install(context, uri)` copies a file the user picked (for
+  example from `ActivityResultContracts.OpenDocument`) into `filesDir/llm/`, through a temp
+  file so a failed copy leaves nothing behind. `isInstalled()` and `remove()` are there for a
+  settings screen. No screen calls them yet.
+- **Debug build, from a laptop:**
+  ```bash
+  adb push gemma-4-E2B-it.litertlm /data/local/tmp/
+  adb shell run-as com.buzzsense.veritas.app mkdir -p files/llm
+  adb shell run-as com.buzzsense.veritas.app cp /data/local/tmp/gemma-4-E2B-it.litertlm files/llm/
+  ```
+
+Structured output uses Koog's Manual mode (`AlertPrompt.structuredRequest`): the JSON
+schema and an example go in the prompt as text, and Koog strips any markdown fences
+before parsing. Native mode was the old default, and it broke this tier, because LiteRT
+ignores `params.schema`. On a phone, the tier is checked only by
+`onDeviceTierGetsFormatInstructionsAndItsJsonIsParsed`, using a stand-in model on the JVM.
+
 ## Files the app must ship (`app/src/main/assets/`)
 
-`feature_spec.json` and `jumantik_rag.sqlite` (from `Audio File/data/rag/`),
-`guidance.db` (built by `tools/guidance/build_guidance_db.py`, see its README), `silero_vad.onnx`. The app manifest declares `INTERNET` and
-`ACCESS_NETWORK_STATE` (cloud tiers, Open-Meteo, offline detection). Required: `libvec0.so` (sqlite-vec) in
-`app/src/main/jniLibs/<abi>/`. Optional: a `.litertlm` model in `filesDir/llm/`
+`feature_spec.json` (from `Audio File/data/rag/`) and the slim train-split `jumantik_rag.sqlite`
+(from `Audio File/pipeline/export_slim_store.py`, 127 MB, git-ignored),
+`guidance.db` (built by `tools/guidance/build_guidance_db.py`, see its README), `silero_vad.onnx` (Silero VAD v6.2.3, MIT). The app manifest declares `INTERNET` and
+`ACCESS_NETWORK_STATE` (cloud tiers, Open-Meteo, offline detection). Required: `libvec0.so` (sqlite-vec 0.1.9, MIT/Apache-2.0, built 16 KB page-aligned by `tools/sqlite-vec/build_android.sh`) in
+`app/src/main/jniLibs/<abi>/`, extracted on install (`useLegacyPackaging`). Licences are in `assets/licenses/`. Optional: the Gemma `.litertlm` model in `filesDir/llm/` (see above)
 (on-device tier). Record at 8 kHz so no resampling is needed. The guidance DB schema is
 documented on `GuidanceStore`; it also stores the embedding of every templated
 query, so the phone does not need a SentencePiece tokenizer.
@@ -108,6 +133,5 @@ query, so the phone does not need a SentencePiece tokenizer.
 - Dengue guidance pages (WHO, CDC, PAHO, PR Health; EN + ES) for `guidance.db`: today it holds 17 English
   malaria passages from the team's Indonesia review and one dengue passage (3M Plus).
 - `Thresholds` picked on validation domains (defaults are placeholders).
-- A smaller train-split store for the APK: the full `jumantik_rag.sqlite` is ~350 MB.
 
 This project is a prototype and is not medical advice.

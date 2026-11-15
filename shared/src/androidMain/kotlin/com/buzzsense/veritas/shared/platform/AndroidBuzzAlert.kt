@@ -39,6 +39,21 @@ import java.io.File
  */
 object AndroidBuzzAlert {
 
+    /** Assets [create] cannot start without. */
+    val REQUIRED_ASSETS = listOf("feature_spec.json", "jumantik_rag.sqlite", "guidance.db", "silero_vad.onnx")
+
+    /**
+     * Files [create] needs that this build does not contain; empty means the engine can start.
+     * Cheap (no file is opened), so the app can call it before [create] and explain what is missing.
+     */
+    fun missingFiles(context: Context): List<String> {
+        val app = context.applicationContext
+        val assets = runCatching { app.assets.list("")?.toSet() }.getOrNull().orEmpty()
+        val missing = REQUIRED_ASSETS.filterNot { it in assets }.map { "assets/$it" }
+        val vec = File(app.applicationInfo.nativeLibraryDir, "libvec0.so")
+        return if (vec.exists()) missing else missing + "jniLibs/<abi>/libvec0.so"
+    }
+
     fun create(
         context: Context,
         /** f0 band fitted on the train split (eval_retrieval.py: 10th-90th percentile of Aedes f0). */
@@ -80,10 +95,20 @@ object AndroidBuzzAlert {
 
     private fun asset(context: Context, name: String): ByteArray = context.assets.open(name).use { it.readBytes() }
 
-    /** SQLite needs a real file path; copy the read-only DB out of the APK once. */
+    /**
+     * SQLite needs a real file path, so the read-only DB is copied out of the APK. It is copied
+     * again after an app update (the bundled store may have changed), through a temp file so an
+     * interrupted copy is never opened.
+     */
     private fun copyAsset(context: Context, name: String): File {
         val out = File(context.noBackupFilesDir, name)
-        if (!out.exists()) context.assets.open(name).use { input -> out.outputStream().use { input.copyTo(it) } }
+        val installedAt = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        if (!out.exists() || out.lastModified() < installedAt) {
+            val tmp = File(context.noBackupFilesDir, "$name.part")
+            context.assets.open(name).use { input -> tmp.outputStream().use { input.copyTo(it, bufferSize = 1 shl 20) } }
+            if (out.exists()) out.delete()
+            check(tmp.renameTo(out)) { "could not move $name into place" }
+        }
         return out
     }
 }

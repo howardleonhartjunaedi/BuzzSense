@@ -17,8 +17,8 @@ private fun session(bytes: ByteArray): OrtSession =
     env.createSession(bytes, OrtSession.SessionOptions().apply { setIntraOpNumThreads(2) })
 
 /**
- * Silero VAD v5 (ONNX), run on 512-sample chunks at 16 kHz.
- * Inputs: `input` [1, 512], `state` [2, 1, 128], `sr` int64; outputs: prob [1, 1], new state.
+ * Silero VAD v5/v6 (ONNX; the app ships v6.2.3), run on 512-sample chunks at 16 kHz plus 64 samples of context.
+ * Inputs: `input` [1, 576], `state` [2, 1, 128], `sr` int64; outputs: prob [1, 1], new state.
  */
 class SileroVad(onnx: ByteArray) : VoiceActivityDetector, AutoCloseable {
     private val s = session(onnx)
@@ -30,7 +30,12 @@ class SileroVad(onnx: ByteArray) : VoiceActivityDetector, AutoCloseable {
         OnnxTensor.createTensor(env, LongBuffer.wrap(longArrayOf(16_000)), longArrayOf()).use { sr ->
             var off = 0
             while (off + CHUNK <= audio.size) {
-                val chunk = arrayOf(audio.copyOfRange(off, off + CHUNK))
+                // As the reference OnnxWrapper (v5+): each 512-sample chunk is preceded by the
+                // previous chunk's last 64 samples (zeros for the first), so the model sees 576.
+                val input = FloatArray(CONTEXT + CHUNK)
+                if (off >= CONTEXT) audio.copyInto(input, 0, off - CONTEXT, off)
+                audio.copyInto(input, CONTEXT, off, off + CHUNK)
+                val chunk = arrayOf(input)
                 OnnxTensor.createTensor(env, chunk).use { input ->
                     OnnxTensor.createTensor(env, state).use { st ->
                         s.run(mapOf("input" to input, "state" to st, "sr" to sr)).use { out ->
@@ -50,7 +55,10 @@ class SileroVad(onnx: ByteArray) : VoiceActivityDetector, AutoCloseable {
 
     override fun close() = s.close()
 
-    private companion object { const val CHUNK = 512 }
+    private companion object {
+        const val CHUNK = 512
+        const val CONTEXT = 64
+    }
 }
 
 /**

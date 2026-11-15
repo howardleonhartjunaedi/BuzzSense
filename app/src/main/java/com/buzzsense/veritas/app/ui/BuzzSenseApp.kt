@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,8 +27,14 @@ import com.buzzsense.veritas.app.ui.components.BuzzScreenPreviews
 import com.buzzsense.veritas.app.ui.components.BuzzSheetContent
 import com.buzzsense.veritas.app.ui.components.BuzzTopAppBar
 import com.buzzsense.veritas.app.ui.components.BuzzTopBarAction
+import com.buzzsense.veritas.app.ui.components.IconChipTone
 import com.buzzsense.veritas.app.ui.components.ResultKind
 import com.buzzsense.veritas.app.ui.components.rememberBuzzNavItems
+import com.buzzsense.veritas.app.ui.detect.AlertUi
+import com.buzzsense.veritas.app.ui.detect.DetectStep
+import com.buzzsense.veritas.app.ui.detect.DetectUiState
+import com.buzzsense.veritas.app.ui.detect.DetectViewModel
+import com.buzzsense.veritas.app.ui.detect.DetectionUi
 import com.buzzsense.veritas.app.ui.screens.AnalyzingScreen
 import com.buzzsense.veritas.app.ui.screens.DetectHomeScreen
 import com.buzzsense.veritas.app.ui.screens.RecordingScreen
@@ -41,43 +44,35 @@ import com.buzzsense.veritas.app.ui.screens.WhatToDoNowSheet
 import com.buzzsense.veritas.app.ui.theme.BuzzIcons
 import com.buzzsense.veritas.app.ui.theme.BuzzTheme
 import com.buzzsense.veritas.app.ui.theme.BuzzsenseTheme
-import kotlinx.coroutines.delay
 
-/** Steps of the Detect tab. */
-@Immutable
-sealed interface DetectStep {
-    data object Home : DetectStep
-    data object Recording : DetectStep
-    data object Analyzing : DetectStep
-    data class Result(val kind: ResultKind, val confidence: Float?) : DetectStep
+/** Everything the Detect flow can ask the app to do; implemented by [DetectViewModel]. */
+interface DetectActions {
+    fun onRecord()
+    fun onStop()
+    fun onRecordAgain()
+    fun onBackHome()
 }
 
-private const val CLIP_SECONDS = 5
-
 /**
- * App shell: flat top bar, bottom nav, Detect flow.
- *
- * The recorder and BuzzAlertEngine are not connected yet. [onRunDetection]
- * is the seam: it is called when a recording finishes and must return the
- * result to show. The default returns a fixed demo result so the UI can be
- * walked end to end without the mic.
+ * App shell: flat top bar, bottom nav, Detect flow. Stateless for the flow itself: it renders
+ * [state] from [DetectViewModel] and reports intents through [actions]. Only UI-local state
+ * (selected tab, open sheets) lives here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuzzSenseApp(
+    state: DetectUiState,
+    recordingProgress: () -> Float,
     micAvailable: Boolean,
     onRequestMic: () -> Unit,
+    actions: DetectActions,
+    onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onRunDetection: suspend () -> DetectStep.Result = {
-        delay(1200)
-        DetectStep.Result(ResultKind.LikelyAedes, 0.82f)
-    },
 ) {
     val navItems = rememberBuzzNavItems()
     var selectedTab by rememberSaveable { mutableStateOf(navItems.first().key) }
-    var step by remember { mutableStateOf<DetectStep>(DetectStep.Home) }
     var showTips by remember { mutableStateOf(false) }
-    var showChecklist by remember { mutableStateOf(false) }
+    var openAlert by remember { mutableStateOf<AlertUi?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -102,27 +97,40 @@ fun BuzzSenseApp(
             }
             return@Scaffold
         }
-        when (val current = step) {
+        when (val step = state.step) {
             DetectStep.Home -> DetectHomeScreen(
                 micAvailable = micAvailable,
-                onRecord = { step = DetectStep.Recording },
+                onRecord = actions::onRecord,
                 onTips = { showTips = true },
                 onAllowMic = onRequestMic,
                 modifier = contentModifier,
             )
             DetectStep.Recording -> RecordingStep(
-                onFinished = { step = DetectStep.Analyzing },
+                progress = recordingProgress,
+                onStop = actions::onStop,
                 modifier = contentModifier,
             )
-            DetectStep.Analyzing -> {
-                LaunchedEffect(Unit) { step = onRunDetection() }
-                AnalyzingScreen(modifier = contentModifier)
-            }
+            DetectStep.Analyzing -> AnalyzingScreen(modifier = contentModifier)
             is DetectStep.Result -> ResultScreen(
-                kind = current.kind,
-                confidence = current.confidence,
-                onWhatToDo = { showChecklist = true },
-                onRecordAgain = { step = DetectStep.Recording },
+                kind = step.detection.kind,
+                confidence = step.detection.confidence,
+                showWhatToDo = step.detection.alert != null,
+                onWhatToDo = { openAlert = step.detection.alert },
+                onRecordAgain = actions::onRecordAgain,
+                modifier = contentModifier,
+            )
+            is DetectStep.Unavailable -> MessageStep(
+                title = stringResource(R.string.engine_unavailable_title),
+                body = stringResource(R.string.engine_unavailable_body, step.missing.joinToString(", ")),
+                button = stringResource(R.string.action_back),
+                onButton = actions::onBackHome,
+                modifier = contentModifier,
+            )
+            DetectStep.Failed -> MessageStep(
+                title = stringResource(R.string.run_failed_title),
+                body = stringResource(R.string.run_failed_body),
+                button = stringResource(R.string.action_try_again),
+                onButton = actions::onRecordAgain,
                 modifier = contentModifier,
             )
         }
@@ -145,45 +153,78 @@ fun BuzzSenseApp(
             }
         }
     }
-    if (showChecklist) {
+    openAlert?.let { alert ->
         WhatToDoNowSheet(
-            entries = SampleChecklist,
-            onDismiss = { showChecklist = false },
-            onOpenOfficialInfo = {},
+            entries = alert.entries,
+            subtitle = "${alert.summary} ${stringResource(R.string.todo_review_hint)}",
+            onDismiss = { openAlert = null },
+            onOpenOfficialInfo = alert.officialUrl?.let { url -> { onOpenUrl(url) } },
         )
     }
 }
 
-/** Drives the 5 s countdown. Progress lives in a float state read only by the ring. */
+/** Countdown driven by the recorder's real progress; only the ring and the seconds redraw. */
 @Composable
-private fun RecordingStep(onFinished: () -> Unit, modifier: Modifier = Modifier) {
-    var progress by remember { mutableFloatStateOf(0f) }
-    var elapsed by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        val totalMs = CLIP_SECONDS * 1000L
-        val start = System.currentTimeMillis()
-        while (true) {
-            val t = System.currentTimeMillis() - start
-            progress = (t.toFloat() / totalMs).coerceAtMost(1f)
-            elapsed = (t / 1000).toInt().coerceAtMost(CLIP_SECONDS)
-            if (t >= totalMs) break
-            delay(16)
-        }
-        onFinished()
+private fun RecordingStep(progress: () -> Float, onStop: () -> Unit, modifier: Modifier = Modifier) {
+    val elapsed by remember(progress) {
+        derivedStateOf { (progress() * DetectViewModel.CLIP_SECONDS).toInt().coerceAtMost(DetectViewModel.CLIP_SECONDS) }
     }
     RecordingScreen(
         elapsedSeconds = elapsed,
-        totalSeconds = CLIP_SECONDS,
-        progress = { progress },
-        onStop = onFinished,
+        totalSeconds = DetectViewModel.CLIP_SECONDS,
+        progress = progress,
+        onStop = onStop,
         modifier = modifier,
     )
+}
+
+@Composable
+private fun MessageStep(title: String, body: String, button: String, onButton: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize().padding(BuzzTheme.spacing.margin), contentAlignment = Alignment.Center) {
+        BuzzMessageState(
+            icon = BuzzIcons.Info,
+            title = title,
+            body = body,
+            tone = IconChipTone.Watch,
+            actions = { BuzzButton(text = button, onClick = onButton, modifier = Modifier.fillMaxWidth()) },
+        )
+    }
+}
+
+private object PreviewActions : DetectActions {
+    override fun onRecord() = Unit
+    override fun onStop() = Unit
+    override fun onRecordAgain() = Unit
+    override fun onBackHome() = Unit
 }
 
 @BuzzScreenPreviews
 @Composable
 private fun BuzzSenseAppPreview() {
     BuzzsenseTheme {
-        BuzzSenseApp(micAvailable = true, onRequestMic = {})
+        BuzzSenseApp(DetectUiState(), { 0f }, micAvailable = true, onRequestMic = {}, actions = PreviewActions, onOpenUrl = {})
+    }
+}
+
+@BuzzScreenPreviews
+@Composable
+private fun BuzzSenseAppResultPreview() {
+    val alert = AlertUi("A mosquito that may be Aedes aegypti was heard indoors.", SampleChecklist, "https://www.cdc.gov/", null)
+    BuzzsenseTheme {
+        BuzzSenseApp(
+            DetectUiState(DetectStep.Result(DetectionUi(ResultKind.LikelyAedes, 0.82f, alert))),
+            { 0f }, micAvailable = true, onRequestMic = {}, actions = PreviewActions, onOpenUrl = {},
+        )
+    }
+}
+
+@BuzzScreenPreviews
+@Composable
+private fun BuzzSenseAppUnavailablePreview() {
+    BuzzsenseTheme {
+        BuzzSenseApp(
+            DetectUiState(DetectStep.Unavailable(listOf("assets/silero_vad.onnx", "jniLibs/<abi>/libvec0.so"))),
+            { 0f }, micAvailable = true, onRequestMic = {}, actions = PreviewActions, onOpenUrl = {},
+        )
     }
 }

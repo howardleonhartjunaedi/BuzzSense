@@ -38,8 +38,9 @@ import com.buzzsense.veritas.app.ui.theme.BuzzTheme
 
 /**
  * Stitch "10 Result Aedes aegypti", "12 Not a dengue mosquito",
- * "22 Not Sure", "23 No Mosquito Heard": one screen, four [ResultKind]s.
- * "What to do now" is offered only for a likely Aedes result.
+ * "22 Not Sure", "23 No Mosquito Heard": one screen for every [ResultKind].
+ * "What to do now" is shown when [showWhatToDo]: by default only for a likely Aedes
+ * result; the app passes true whenever the agent produced a checklist.
  */
 @Composable
 fun ResultScreen(
@@ -48,6 +49,7 @@ fun ResultScreen(
     onWhatToDo: () -> Unit,
     onRecordAgain: () -> Unit,
     modifier: Modifier = Modifier,
+    showWhatToDo: Boolean = kind == ResultKind.LikelyAedes,
 ) {
     Column(
         modifier = modifier
@@ -59,7 +61,7 @@ fun ResultScreen(
             BuzzResultHero(kind = kind, confidence = confidence)
         }
         Column(verticalArrangement = Arrangement.spacedBy(BuzzTheme.spacing.sm)) {
-            if (kind == ResultKind.LikelyAedes) {
+            if (showWhatToDo) {
                 BuzzButton(text = stringResource(R.string.result_what_to_do), onClick = onWhatToDo, modifier = Modifier.fillMaxWidth())
                 BuzzTextButton(text = stringResource(R.string.result_record_again), onClick = onRecordAgain, modifier = Modifier.fillMaxWidth())
             } else {
@@ -85,13 +87,14 @@ fun WhatToDoNowContent(
     entries: List<ChecklistEntry>,
     checkedIds: Set<String>,
     onToggle: (String, Boolean) -> Unit,
-    onOpenOfficialInfo: () -> Unit,
+    onOpenOfficialInfo: (() -> Unit)?,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String = stringResource(R.string.todo_subtitle),
 ) {
     BuzzSheetContent(
         title = stringResource(R.string.todo_title),
-        subtitle = stringResource(R.string.todo_subtitle),
+        subtitle = subtitle,
         modifier = modifier,
         actions = {
             BuzzButton(text = stringResource(R.string.todo_done), onClick = onDone, modifier = Modifier.fillMaxWidth())
@@ -112,7 +115,9 @@ fun WhatToDoNowContent(
                 )
             }
         }
-        BuzzLinkButton(text = stringResource(R.string.todo_official_info), onClick = onOpenOfficialInfo)
+        if (onOpenOfficialInfo != null) {
+            BuzzLinkButton(text = stringResource(R.string.todo_official_info), onClick = onOpenOfficialInfo)
+        }
     }
 }
 
@@ -122,9 +127,10 @@ fun WhatToDoNowContent(
 fun WhatToDoNowSheet(
     entries: List<ChecklistEntry>,
     onDismiss: () -> Unit,
-    onOpenOfficialInfo: () -> Unit,
+    onOpenOfficialInfo: (() -> Unit)?,
+    subtitle: String = stringResource(R.string.todo_subtitle),
 ) {
-    var checked by remember { mutableStateOf(emptySet<String>()) }
+    var checked by remember(entries) { mutableStateOf(emptySet<String>()) }
     BuzzModalBottomSheet(onDismissRequest = onDismiss) {
         WhatToDoNowContent(
             entries = entries,
@@ -132,11 +138,12 @@ fun WhatToDoNowSheet(
             onToggle = { id, on -> checked = if (on) checked + id else checked - id },
             onOpenOfficialInfo = onOpenOfficialInfo,
             onDone = onDismiss,
+            subtitle = subtitle,
         )
     }
 }
 
-/** Placeholder actions until the agent's AlertDraft is wired in. */
+/** Sample actions for previews and the component gallery; the app shows the agent's AlertDraft. */
 internal val SampleChecklist = listOf(
     ChecklistEntry("drain", "Drain water containers", "WHO · Dengue and severe dengue", BuzzIcons.WaterDrop),
     ChecklistEntry("cover", "Cover water storage", "CDC · Mosquito control at home", BuzzIcons.Shield),

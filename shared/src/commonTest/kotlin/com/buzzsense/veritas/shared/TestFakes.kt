@@ -79,3 +79,10 @@ fun harmonicSamples(seconds: Int = 1, rate: Int = 8_000, f0: Double = 600.0) =
 /** 3 s of a 600 Hz tone at 8 kHz: enough windows for the detector. */
 fun toneSamples(seconds: Int = 3, rate: Int = 8_000, hz: Double = 600.0) =
     FloatArray(seconds * rate) { i -> (0.5 * kotlin.math.sin(2 * kotlin.math.PI * hz * i / rate)).toFloat() }
+
+/** Stand-in for Koog's LiteRT Gemma models (Android-only): text completion, no native JSON schema. */
+val ON_DEVICE_MODEL = ai.koog.prompt.llm.LLModel(
+    provider = ai.koog.prompt.llm.OllamaLLMProvider,
+    id = "gemma-4-E2B-it.litertlm",
+    capabilities = listOf(ai.koog.prompt.llm.LLMCapability.Completion, ai.koog.prompt.llm.LLMCapability.Tools),
+)
