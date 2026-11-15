@@ -40,3 +40,6 @@ replay_pid*.log
 __pycache__/
 /tools/guidance/.build/
 /app/src/androidTest/assets/eval40_8k.f32
+
+# graphify output (generated)
+graphify-out/
