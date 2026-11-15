@@ -12,6 +12,7 @@ The code lives here (in git); the data and the venv stay in `O:\Veritas AI\Audio
 | Kotlin parity fixture | `.venv/Scripts/python.exe -I "../App Folder/pipeline/export_parity_fixture.py" --data data/raw --rag data/rag --out "../App Folder/shared/src/jvmTest/resources/parity_fixture.json"` | Then copy `data/rag/feature_spec.json` next to it and into `app/src/main/assets/` |
 | App acoustic store | `.venv/Scripts/python.exe -I "../App Folder/pipeline/export_slim_store.py" --rag data/rag --out data/rag_slim` | Train split only for the app's kNN; checks neighbours match the full store. Copy the result to `App Folder/app/src/main/assets/` (git-ignored, 127 MB) |
 | Feature experiments | `.venv/Scripts/python.exe -I "../App Folder/pipeline/experiments.py" --data data/raw --out data/rag` | Leave-one-domain-out tuning, then one test run |
+| Site-balancing check | `.venv/Scripts/python.exe -I "../App Folder/pipeline/experiments_sitebal.py" --features data/rag/exp_features.npz --out data/rag_sitebal` | Leave-one-site-out on train/val only (~10 min); needs `exp_features.npz` from `experiments.py`. Negative result 2026-11-15: capping or equalising each site's kNN votes did not beat plain k=15, so the app is unchanged (details in the script docstring) |
 
 ## local-constraints
 - `data/raw/` is read-only input. Scripts read audio straight from the zips (`zip::member` paths); do not extract into `data/raw/` unless asked (`unzip_all.py` exists for that).
